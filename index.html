@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -344,10 +344,12 @@
               <button id="add-round" type="button" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-primary-700 active:bg-primary-800">+ Agregar ronda</button>
               <button id="finalize-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-emerald-700 active:bg-emerald-800">Finalizar partida</button>
               <button id="new-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold shadow hover:bg-slate-200 active:bg-slate-300">Nueva partida</button>
-                </div>
+              <button id="debug-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-red-100 text-red-700 px-3 py-2 text-sm font-semibold shadow hover:bg-red-200">🐛 Debug</button>
+              <button id="reset-all" type="button" class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-red-700">🔄 Reset</button>
             </div>
+          </div>
 
-                    <div class="rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="rounded-2xl border border-slate-200 overflow-hidden">
             <div class="grid grid-cols-12 bg-slate-50 text-sm font-semibold text-slate-600">
               <div class="col-span-2 px-4 py-3">Ronda</div>
               <div class="col-span-4 px-4 py-3">Equipo A</div>
@@ -381,8 +383,8 @@
             <div class="rounded-xl border border-slate-200 p-4">
               <div class="text-sm text-slate-600">Total Equipo B</div>
               <div id="total-b" class="text-3xl font-extrabold mt-1">0</div>
-                </div>
             </div>
+          </div>
         </div>
       </form>
     </section>
@@ -450,46 +452,23 @@
       });
     }
 
-    async function loadMatches() {
+    // Función simplificada para cargar partidas (solo localStorage por ahora)
+    function loadMatches() {
       try {
-        await waitForFirebase();
-        const { ref, get } = window.firebaseRefs;
-        const { database } = window.firebase;
-        
-        const matchesRef = ref(database, MATCH_REF);
-        const snapshot = await get(matchesRef);
-        
-        if (snapshot.exists()) {
-          return Object.values(snapshot.val()) || [];
-        }
+        const raw = localStorage.getItem(MATCHES_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
         return [];
-      } catch (error) {
-        console.error('Error loading matches from Firebase:', error);
-        // Fallback a localStorage si Firebase falla
-        try {
-          const raw = localStorage.getItem(MATCHES_KEY);
-          return raw ? JSON.parse(raw) : [];
-        } catch {
-          return [];
-        }
       }
     }
 
-    async function saveMatches(list) {
+    // Función simplificada para guardar partidas (solo localStorage por ahora)
+    function saveMatches(list) {
       try {
-        await waitForFirebase();
-        const { ref, set } = window.firebaseRefs;
-        const { database } = window.firebase;
-        
-        const matchesRef = ref(database, MATCH_REF);
-        await set(matchesRef, list);
-        
-        // También guardar en localStorage como backup
         localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+        console.log('Matches saved to localStorage:', list);
       } catch (error) {
-        console.error('Error saving matches to Firebase:', error);
-        // Fallback a localStorage si Firebase falla
-        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+        console.error('Error saving matches:', error);
       }
     }
 
@@ -1072,6 +1051,29 @@
       };
     }
 
+    // Función para asegurar que match tenga la estructura correcta
+    function ensureMatchStructure(matchObj) {
+      if (!matchObj) return defaultMatch();
+      
+      return {
+        id: matchObj.id || randId(),
+        inProgress: matchObj.inProgress !== false, // Por defecto true
+        fecha: matchObj.fecha || todayYmd(),
+        mesa: matchObj.mesa || '',
+        target: matchObj.target || 100,
+        teamA: { 
+          j1: matchObj.teamA?.j1 || '', 
+          j2: matchObj.teamA?.j2 || '' 
+        },
+        teamB: { 
+          j1: matchObj.teamB?.j1 || '', 
+          j2: matchObj.teamB?.j2 || '' 
+        },
+        rounds: Array.isArray(matchObj.rounds) ? matchObj.rounds : [],
+        closedAt: matchObj.closedAt || null
+      };
+    }
+
     function startNewMatch(preserve = true) {
       const prev = match;
       match = defaultMatch();
@@ -1086,61 +1088,40 @@
       recalcAndRender();
     }
 
-    async function loadMatch() {
+    // Función simplificada para cargar partida (solo localStorage por ahora)
+    function loadMatch() {
       try {
-        await waitForFirebase();
-        const { ref, get } = window.firebaseRefs;
-        const { database } = window.firebase;
-        
-        const matchRef = ref(database, CURRENT_MATCH_REF);
-        const snapshot = await get(matchRef);
-        
-        if (snapshot.exists()) {
-          const parsed = snapshot.val();
-          return Object.assign(defaultMatch(), parsed);
-        }
+        const raw = localStorage.getItem(MATCH_KEY);
+        if (!raw) return defaultMatch();
+        const parsed = JSON.parse(raw);
+        return ensureMatchStructure(parsed);
+      } catch {
         return defaultMatch();
-      } catch (error) {
-        console.error('Error loading match from Firebase:', error);
-        // Fallback a localStorage si Firebase falla
-        try {
-          const raw = localStorage.getItem(MATCH_KEY);
-          if (!raw) return defaultMatch();
-          const parsed = JSON.parse(raw);
-          return Object.assign(defaultMatch(), parsed);
-        } catch {
-          return defaultMatch();
-        }
       }
     }
 
-    async function saveMatch(m) {
+    // Función simplificada para guardar partida (solo localStorage por ahora)
+    function saveMatch(m) {
       try {
-        await waitForFirebase();
-        const { ref, set } = window.firebaseRefs;
-        const { database } = window.firebase;
-        
-        const matchRef = ref(database, CURRENT_MATCH_REF);
-        await set(matchRef, m);
-        
-        // También guardar en localStorage como backup
         localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+        console.log('Match saved to localStorage:', m);
       } catch (error) {
-        console.error('Error saving match to Firebase:', error);
-        // Fallback a localStorage si Firebase falla
-        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+        console.error('Error saving match:', error);
       }
     }
 
     let match = null;
 
-    async function initializeMatch() {
-      match = await loadMatch();
+    function initializeMatch() {
+      console.log('initializeMatch started');
+      match = loadMatch();
+      console.log('Match loaded:', match);
+      console.log('Match inProgress:', match.inProgress);
+      
       bindHeaderInputs();
       recalcAndRender();
       
-      // Configurar sincronización en tiempo real
-      setupRealtimeSync();
+      console.log('initializeMatch completed');
     }
 
     function setupRealtimeSync() {
@@ -1155,7 +1136,7 @@
             if (snapshot.exists() && !autoFinalizing) {
               const updatedMatch = snapshot.val();
               if (updatedMatch && updatedMatch.id !== match?.id) {
-                match = Object.assign(defaultMatch(), updatedMatch);
+                match = ensureMatchStructure(updatedMatch);
                 bindHeaderInputs();
                 recalcAndRender();
               }
@@ -1193,6 +1174,13 @@
     }
 
     function bindHeaderInputs() {
+      console.log('bindHeaderInputs called with match:', match);
+      
+      if (!match) {
+        console.error('Match is null in bindHeaderInputs');
+        return;
+      }
+      
       fechaInput.value = match.fecha || '';
       mesaInput.value = match.mesa || '';
       targetSelect.value = String(match.target || 100);
@@ -1206,12 +1194,25 @@
       const setDisabled = !match.inProgress;
       const hasRounds = match.rounds && match.rounds.length > 0;
       
+      console.log('Match inProgress:', match.inProgress);
+      console.log('setDisabled:', setDisabled);
+      console.log('addRoundBtn will be disabled:', setDisabled);
+      
       // Bloquear nombres de equipos si ya hay rondas iniciadas
       const teamNamesLocked = hasRounds && match.inProgress;
       
       [fechaInput, mesaInput, targetSelect, addRoundBtn].forEach(el => { 
         el.disabled = setDisabled; 
         el.classList.toggle('opacity-60', setDisabled); 
+        console.log(`Element ${el.id || el.className} disabled:`, el.disabled);
+      });
+      
+      // Verificación adicional para el botón de agregar ronda
+      console.log('Add round button final state:', {
+        disabled: addRoundBtn.disabled,
+        opacity: addRoundBtn.classList.contains('opacity-60'),
+        matchInProgress: match.inProgress,
+        setDisabled: setDisabled
       });
       
       [a1, a2, b1, b2].forEach(el => { 
@@ -1444,8 +1445,30 @@
     b2.addEventListener('input', () => { match.teamB.j2 = b2.value; saveMatch(match); });
 
     addRoundBtn.addEventListener('click', () => {
-      if (!match.inProgress) return;
+      console.log('Add round button clicked');
+      console.log('Match state:', match);
+      
+      if (!match) {
+        console.error('Match is null, cannot add round');
+        return;
+      }
+      
+      if (!match.inProgress) {
+        console.log('Match is not in progress, cannot add round');
+        return;
+      }
+      
+      console.log('Adding new round...');
+      
+      // Asegurar que rounds sea un array
+      if (!Array.isArray(match.rounds)) {
+        console.log('Rounds is not an array, initializing...');
+        match.rounds = [];
+      }
+      
       match.rounds.push({ a: 0, b: 0 });
+      console.log('New rounds array:', match.rounds);
+      
       saveMatch(match);
       recalcAndRender();
     });
@@ -1458,18 +1481,61 @@
       startNewMatch(true);
     });
 
+    // Botón de debug
+    const debugBtn = document.getElementById('debug-match');
+    if (debugBtn) {
+      debugBtn.addEventListener('click', () => {
+        console.log('=== DEBUG INFO ===');
+        console.log('Match object:', match);
+        console.log('Match inProgress:', match?.inProgress);
+        console.log('Match rounds:', match?.rounds);
+        console.log('Add round button disabled:', addRoundBtn.disabled);
+        console.log('Add round button opacity:', addRoundBtn.classList.contains('opacity-60'));
+        console.log('Firebase available:', !!window.firebase);
+        console.log('localStorage match:', localStorage.getItem(MATCH_KEY));
+        console.log('localStorage matches:', localStorage.getItem(MATCHES_KEY));
+        console.log('==================');
+        
+        // Forzar nueva partida si hay problemas
+        if (!match || !match.inProgress) {
+          console.log('Forcing new match...');
+          startNewMatch();
+        }
+      });
+    }
+
+    // Botón de reset
+    const resetBtn = document.getElementById('reset-all');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        console.log('Resetting everything...');
+        
+        // Limpiar localStorage
+        localStorage.removeItem(MATCH_KEY);
+        localStorage.removeItem(MATCHES_KEY);
+        
+        // Crear nueva partida
+        match = defaultMatch();
+        bindHeaderInputs();
+        recalcAndRender();
+        
+        console.log('Reset completed, new match created:', match);
+      });
+    }
+
     // Inicialización
-    initializeMatch().then(() => {
+    try {
+      initializeMatch();
       if (!match.fecha) {
         match.fecha = todayYmd();
       }
-    }).catch(error => {
+    } catch (error) {
       console.error('Error initializing match:', error);
       // Fallback: crear match por defecto
       match = defaultMatch();
       bindHeaderInputs();
       recalcAndRender();
-    });
+    }
   });
   </script>
 
