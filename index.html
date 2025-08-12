@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Liga Dominó y Romo - Ismael Butler</title>
+    <title>Dashboard Liga Dominó y Romo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
@@ -73,7 +73,7 @@
   <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
       <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo - Ismael Butler</span>
+        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo</span>
       </h1>
       <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
         <span id="connection-status" class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
@@ -179,12 +179,12 @@
               <th class="px-4 py-3 text-left font-semibold">Puntos B</th>
               <th class="px-4 py-3 text-left font-semibold">Ganador</th>
               <th class="px-4 py-3 text-left font-semibold">Lisa</th>
-            </tr>
-          </thead>
+                    </tr>
+                </thead>
           <tbody id="historial-body" class="divide-y divide-slate-200"></tbody>
-        </table>
-      </div>
-      
+            </table>
+        </div>
+
       <div id="no-results" class="text-center py-8 text-slate-500 hidden">
         No se encontraron partidas con los filtros aplicados.
       </div>
@@ -198,15 +198,15 @@
             <span class="text-blue-500">🎲</span> Detalles de la Partida
           </h3>
           <button id="close-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
-        </div>
-        
+            </div>
+
         <div class="p-6 space-y-6">
           <!-- Información general -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-slate-50 p-4 rounded-xl">
               <div class="text-sm text-slate-600">Fecha</div>
               <div id="modal-fecha" class="text-lg font-semibold">-</div>
-            </div>
+                </div>
             <div class="bg-slate-50 p-4 rounded-xl">
               <div class="text-sm text-slate-600">Mesa</div>
               <div id="modal-mesa" class="text-lg font-semibold">-</div>
@@ -214,8 +214,8 @@
             <div class="bg-slate-50 p-4 rounded-xl">
               <div class="text-sm text-slate-600">Modalidad</div>
               <div id="modal-modalidad" class="text-lg font-semibold">-</div>
+                </div>
             </div>
-          </div>
 
           <!-- Equipos y resultado -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -223,7 +223,7 @@
               <div class="text-center mb-4">
                 <h4 class="text-lg font-bold text-slate-800">Equipo A</h4>
                 <div id="modal-players-a" class="text-slate-600 mt-1">-</div>
-              </div>
+                </div>
               <div class="text-center">
                 <div id="modal-total-a" class="text-4xl font-extrabold text-slate-800">0</div>
                 <div class="text-sm text-slate-600">Puntos totales</div>
@@ -238,9 +238,9 @@
               <div class="text-center">
                 <div id="modal-total-b" class="text-4xl font-extrabold text-slate-800">0</div>
                 <div class="text-sm text-slate-600">Puntos totales</div>
-              </div>
+                </div>
             </div>
-          </div>
+        </div>
 
           <!-- Resultado -->
           <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
@@ -258,7 +258,7 @@
                 <div id="modal-duracion" class="text-lg font-bold text-green-800">-</div>
               </div>
             </div>
-          </div>
+    </div>
 
           <!-- Rondas detalladas -->
           <div>
@@ -411,7 +411,40 @@
           <span>📊</span> Ver Historial
         </button>
       </div>
-      <p class="text-sm text-slate-600 mb-3">Eficiencia = Victorias / (Victorias + Derrotas). Se calcula automáticamente a partir de partidas finalizadas.</p>
+      
+      <!-- Filtros de clasificación -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div>
+          <label for="clasif-fecha-desde" class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
+          <input type="date" id="clasif-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="clasif-fecha-hasta" class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
+          <input type="date" id="clasif-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="clasif-periodo" class="block text-sm font-semibold text-slate-700 mb-1">Período rápido</label>
+          <select id="clasif-periodo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Personalizado</option>
+            <option value="7">Últimos 7 días</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 3 meses</option>
+            <option value="365">Último año</option>
+            <option value="all">Todas las partidas</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="clasif-limpiar-filtros" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+              <div class="flex items-center justify-between mb-3">
+          <p class="text-sm text-slate-600">Eficiencia = Victorias / (Victorias + Derrotas). Se calcula automáticamente a partir de partidas finalizadas.</p>
+          <div id="clasif-periodo-info" class="text-sm text-primary-600 font-medium">
+            Mostrando todas las partidas
+          </div>
+        </div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 text-slate-700">
@@ -532,7 +565,7 @@
       return (name || '').trim();
     }
 
-    function deriveStatsFromMatches(matches) {
+    function deriveStatsFromMatches(matches, fechaDesde = null, fechaHasta = null) {
       const nameToStats = new Map();
       const ensure = (name) => {
         const key = canonicalName(name);
@@ -541,7 +574,31 @@
         return nameToStats.get(key);
       };
 
-      for (const m of matches) {
+      let filteredMatches = matches;
+      
+      // Aplicar filtros de fecha si están definidos
+      if (fechaDesde || fechaHasta) {
+        filteredMatches = matches.filter(m => {
+          if (!m || !m.closedAt) return false;
+          
+          const matchDate = new Date(m.fecha || m.closedAt);
+          
+          if (fechaDesde) {
+            const desde = new Date(fechaDesde);
+            if (matchDate < desde) return false;
+          }
+          
+          if (fechaHasta) {
+            const hasta = new Date(fechaHasta);
+            hasta.setHours(23, 59, 59, 999); // Incluir todo el día
+            if (matchDate > hasta) return false;
+          }
+          
+          return true;
+        });
+      }
+
+      for (const m of filteredMatches) {
         if (!m || !m.closedAt) continue;
         const totalA = Number(m.totalA || 0);
         const totalB = Number(m.totalB || 0);
@@ -579,7 +636,12 @@
     async function renderClasificatoria() {
       try {
         const matches = await loadMatches();
-        const players = deriveStatsFromMatches(matches);
+        
+        // Obtener filtros de fecha
+        const fechaDesde = document.getElementById('clasif-fecha-desde')?.value || null;
+        const fechaHasta = document.getElementById('clasif-fecha-hasta')?.value || null;
+        
+        const players = deriveStatsFromMatches(matches, fechaDesde, fechaHasta);
 
         players.sort((a, b) => {
           const ea = compute(a).eff;
@@ -1628,11 +1690,118 @@
 
 
 
+    // Funciones para filtros de clasificación
+    function updateClasificacionPeriodoInfo() {
+      const fechaDesde = document.getElementById('clasif-fecha-desde')?.value;
+      const fechaHasta = document.getElementById('clasif-fecha-hasta')?.value;
+      const periodoSelect = document.getElementById('clasif-periodo');
+      const infoDiv = document.getElementById('clasif-periodo-info');
+      
+      if (!infoDiv) return;
+      
+      let infoText = '';
+      
+      if (periodoSelect.value === '7') {
+        infoText = 'Mostrando últimos 7 días';
+      } else if (periodoSelect.value === '30') {
+        infoText = 'Mostrando últimos 30 días';
+      } else if (periodoSelect.value === '90') {
+        infoText = 'Mostrando últimos 3 meses';
+      } else if (periodoSelect.value === '365') {
+        infoText = 'Mostrando último año';
+      } else if (periodoSelect.value === 'all') {
+        infoText = 'Mostrando todas las partidas';
+      } else if (fechaDesde || fechaHasta) {
+        if (fechaDesde && fechaHasta) {
+          infoText = `Desde ${new Date(fechaDesde).toLocaleDateString('es-ES')} hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
+        } else if (fechaDesde) {
+          infoText = `Desde ${new Date(fechaDesde).toLocaleDateString('es-ES')}`;
+        } else if (fechaHasta) {
+          infoText = `Hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
+        }
+      } else {
+        infoText = 'Mostrando todas las partidas';
+      }
+      
+      infoDiv.textContent = infoText;
+    }
+
+    function setClasificacionPeriodo(days) {
+      const fechaDesde = document.getElementById('clasif-fecha-desde');
+      const fechaHasta = document.getElementById('clasif-fecha-hasta');
+      
+      if (days === 'all') {
+        fechaDesde.value = '';
+        fechaHasta.value = '';
+      } else {
+        const hasta = new Date();
+        const desde = new Date();
+        desde.setDate(desde.getDate() - parseInt(days));
+        
+        fechaDesde.value = desde.toISOString().split('T')[0];
+        fechaHasta.value = hasta.toISOString().split('T')[0];
+      }
+      
+      updateClasificacionPeriodoInfo();
+      renderClasificatoria().catch(error => {
+        console.error('Error refreshing classification:', error);
+      });
+    }
+
+    function limpiarClasificacionFiltros() {
+      document.getElementById('clasif-fecha-desde').value = '';
+      document.getElementById('clasif-fecha-hasta').value = '';
+      document.getElementById('clasif-periodo').value = '';
+      updateClasificacionPeriodoInfo();
+      renderClasificatoria().catch(error => {
+        console.error('Error refreshing classification:', error);
+      });
+    }
+
+    // Event listeners para filtros de clasificación
+    const clasifFechaDesde = document.getElementById('clasif-fecha-desde');
+    const clasifFechaHasta = document.getElementById('clasif-fecha-hasta');
+    const clasifPeriodo = document.getElementById('clasif-periodo');
+    const clasifLimpiarFiltros = document.getElementById('clasif-limpiar-filtros');
+
+    if (clasifFechaDesde) {
+      clasifFechaDesde.addEventListener('change', () => {
+        clasifPeriodo.value = ''; // Reset período rápido
+        updateClasificacionPeriodoInfo();
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+    }
+
+    if (clasifFechaHasta) {
+      clasifFechaHasta.addEventListener('change', () => {
+        clasifPeriodo.value = ''; // Reset período rápido
+        updateClasificacionPeriodoInfo();
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+    }
+
+    if (clasifPeriodo) {
+      clasifPeriodo.addEventListener('change', () => {
+        setClasificacionPeriodo(clasifPeriodo.value);
+      });
+    }
+
+    if (clasifLimpiarFiltros) {
+      clasifLimpiarFiltros.addEventListener('click', limpiarClasificacionFiltros);
+    }
+
     // Inicialización
     initializeMatch().then(() => {
       if (!match.fecha) {
         match.fecha = todayYmd();
       }
+      
+      // Inicializar información del período de clasificación
+      updateClasificacionPeriodoInfo();
     }).catch(error => {
       console.error('Error initializing match:', error);
       // Fallback: crear match por defecto
