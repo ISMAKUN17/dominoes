@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Liga Dominó y Romo - By Ismael Mayordomo</title>
+    <title>Dashboard Liga Dominó y Romo - Ismael Mayordomo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
@@ -73,12 +73,15 @@
   <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
       <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo</span>
+        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo - Ismael Mayordomo</span>
       </h1>
       <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
         <span id="connection-status" class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
           <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> Inicializando...
         </span>
+        <button id="temp-test-btn" class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200">
+          🔍 Test Data
+        </button>
       </div>
     </div>
   </header>
@@ -435,7 +438,7 @@
   </main>
 
   <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
-    <p>© 2025 Liga Dominó y Romo- By Ismael Mayordomo</p>
+    <p>© 2025 Liga Dominó y Romo - Ismael Mayordomo</p>
   </footer>
 
   <script>
@@ -738,79 +741,87 @@
 
     async function renderHistorial() {
       try {
+        console.log('🔄 Rendering history...');
         const allMatches = await loadMatches();
+        console.log('📊 All matches loaded:', allMatches);
+        
         const filteredMatches = filterMatches(allMatches);
-      
-      // Ordenar por fecha
-      filteredMatches.sort((a, b) => {
-        const dateA = new Date(a.fecha || a.closedAt);
-        const dateB = new Date(b.fecha || b.closedAt);
-        return historialSortDesc ? dateB - dateA : dateA - dateB;
-      });
-
-      // Actualizar estadísticas
-      const stats = calculateStats(filteredMatches);
-      statsTotal.textContent = stats.total;
-      statsLisas.textContent = stats.lisas;
-      statsPromedio.textContent = stats.promedioPuntos;
-      statsDuracion.textContent = stats.promedioRondas;
-
-      // Renderizar tabla
-      historialBody.innerHTML = '';
-      
-      if (filteredMatches.length === 0) {
-        noResults.classList.remove('hidden');
-        return;
-      }
-      
-      noResults.classList.add('hidden');
-      
-      filteredMatches.forEach(match => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-slate-50';
-
-        const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
-        const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
-        const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+        console.log('🔍 Filtered matches:', filteredMatches);
         
-        let ganador = '-';
-        if (match.winner === 'A') ganador = 'Equipo A';
-        else if (match.winner === 'B') ganador = 'Equipo B';
+        // Ordenar por fecha
+        filteredMatches.sort((a, b) => {
+          const dateA = new Date(a.fecha || a.closedAt);
+          const dateB = new Date(b.fecha || b.closedAt);
+          return historialSortDesc ? dateB - dateA : dateA - dateB;
+        });
 
-        row.innerHTML = `
-          <td class="px-4 py-3">${fecha}</td>
-          <td class="px-4 py-3">${match.mesa || '-'}</td>
-          <td class="px-4 py-3">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              ${match.target}
-            </span>
-          </td>
-          <td class="px-4 py-3 max-w-32 truncate" title="${equipoA}">${equipoA}</td>
-          <td class="px-4 py-3 font-semibold ${match.winner === 'A' ? 'text-green-600' : ''}">${match.totalA || 0}</td>
-          <td class="px-4 py-3 max-w-32 truncate" title="${equipoB}">${equipoB}</td>
-          <td class="px-4 py-3 font-semibold ${match.winner === 'B' ? 'text-green-600' : ''}">${match.totalB || 0}</td>
-          <td class="px-4 py-3">
-            ${match.winner ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">${ganador}</span>` : '-'}
-          </td>
-          <td class="px-4 py-3">
-            ${match.lisa ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sí</span>' : '<span class="text-slate-400">No</span>'}
-          </td>
-        `;
+        // Actualizar estadísticas
+        const stats = calculateStats(filteredMatches);
+        statsTotal.textContent = stats.total;
+        statsLisas.textContent = stats.lisas;
+        statsPromedio.textContent = stats.promedioPuntos;
+        statsDuracion.textContent = stats.promedioRondas;
+
+        // Renderizar tabla
+        historialBody.innerHTML = '';
         
-        // Hacer la fila clickeable
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Row clicked, calling showMatchDetails');
-          showMatchDetails(match);
+        if (filteredMatches.length === 0) {
+          noResults.classList.remove('hidden');
+          console.log('📭 No matches found to display');
+          return;
+        }
+        
+        noResults.classList.add('hidden');
+        console.log(`📋 Rendering ${filteredMatches.length} matches`);
+        
+        filteredMatches.forEach((match, index) => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-50';
+
+          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+          
+          let ganador = '-';
+          if (match.winner === 'A') ganador = 'Equipo A';
+          else if (match.winner === 'B') ganador = 'Equipo B';
+
+          row.innerHTML = `
+            <td class="px-4 py-3">${fecha}</td>
+            <td class="px-4 py-3">${match.mesa || '-'}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                ${match.target}
+              </span>
+            </td>
+            <td class="px-4 py-3 max-w-32 truncate" title="${equipoA}">${equipoA}</td>
+            <td class="px-4 py-3 font-semibold ${match.winner === 'A' ? 'text-green-600' : ''}">${match.totalA || 0}</td>
+            <td class="px-4 py-3 max-w-32 truncate" title="${equipoB}">${equipoB}</td>
+            <td class="px-4 py-3 font-semibold ${match.winner === 'B' ? 'text-green-600' : ''}">${match.totalB || 0}</td>
+            <td class="px-4 py-3">
+              ${match.winner ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">${ganador}</span>` : '-'}
+            </td>
+            <td class="px-4 py-3">
+              ${match.lisa ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sí</span>' : '<span class="text-slate-400">No</span>'}
+            </td>
+          `;
+          
+          // Hacer la fila clickeable
+          row.style.cursor = 'pointer';
+          row.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Row clicked, calling showMatchDetails');
+            showMatchDetails(match);
+          });
+          
+          historialBody.appendChild(row);
         });
         
-        historialBody.appendChild(row);
-      });
+        console.log('✅ History rendered successfully');
       } catch (error) {
-        console.error('Error rendering history:', error);
-        historialBody.innerHTML = '<tr><td colspan="9" class="px-4 py-3 text-center text-red-600">Error al cargar el historial</td></tr>';
+        console.error('❌ Error rendering history:', error);
+        historialBody.innerHTML = '<tr><td colspan="9" class="px-4 py-3 text-center text-red-600">Error al cargar el historial: ' + error.message + '</td></tr>';
       }
     }
 
@@ -1651,6 +1662,44 @@
     }
 
 
+
+    // Botón temporal de test de datos
+    const tempTestBtn = document.getElementById('temp-test-btn');
+    if (tempTestBtn) {
+      tempTestBtn.addEventListener('click', async () => {
+        console.log('🔍 Testing data availability...');
+        
+        try {
+          // Verificar Firebase
+          if (window.firebase && window.firebaseRefs) {
+            console.log('✅ Firebase available');
+            
+            // Probar cargar partidas
+            const matches = await loadMatches();
+            console.log('📊 Matches in Firebase:', matches);
+            console.log('📊 Matches length:', matches.length);
+            
+            // Probar cargar partida actual
+            const currentMatch = await loadMatch();
+            console.log('🎲 Current match:', currentMatch);
+            
+            // Verificar localStorage como backup
+            const localMatches = localStorage.getItem(MATCHES_KEY);
+            const localMatch = localStorage.getItem(MATCH_KEY);
+            console.log('💾 localStorage matches:', localMatches ? JSON.parse(localMatches) : null);
+            console.log('💾 localStorage current match:', localMatch ? JSON.parse(localMatch) : null);
+            
+            alert(`🔍 Test completado!\n\nFirebase: ${matches.length} partidas\nPartida actual: ${currentMatch ? 'Sí' : 'No'}\nlocalStorage: ${localMatches ? 'Sí' : 'No'}`);
+          } else {
+            console.error('❌ Firebase not available');
+            alert('❌ Firebase no está disponible');
+          }
+        } catch (error) {
+          console.error('❌ Test error:', error);
+          alert('❌ Error en test: ' + error.message);
+        }
+      });
+    }
 
     // Inicialización
     initializeMatch().then(() => {
