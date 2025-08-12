@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Liga Dominó y Romo - Ismael Mayordomo</title>
+    <title>Dashboard Liga Dominó y Romo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
@@ -73,15 +73,13 @@
   <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
       <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo - Ismael Mayordomo</span>
+        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo</span>
       </h1>
       <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
         <span id="connection-status" class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
           <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> Inicializando...
         </span>
-        <button id="temp-test-btn" class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200">
-          🔍 Test Data
-        </button>
+
       </div>
     </div>
   </header>
@@ -359,7 +357,7 @@
               <button id="add-round" type="button" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-primary-700 active:bg-primary-800">+ Agregar ronda</button>
               <button id="finalize-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-emerald-700 active:bg-emerald-800">Finalizar partida</button>
               <button id="new-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold shadow hover:bg-slate-200 active:bg-slate-300">Nueva partida</button>
-              <button id="reset-all" type="button" class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-red-700">🔄 Reset</button>
+
             </div>
           </div>
 
@@ -438,7 +436,7 @@
   </main>
 
   <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
-    <p>© 2025 Liga Dominó y Romo - Ismael Mayordomo</p>
+    <p>© 2024 Liga Dominó y Romo</p>
   </footer>
 
   <script>
@@ -1624,82 +1622,11 @@
 
 
 
-    // Botón de reset
-    const resetBtn = document.getElementById('reset-all');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', async () => {
-        console.log('Resetting everything...');
-        
-        try {
-          // Limpiar Firebase
-          if (window.firebase && window.firebaseRefs) {
-            const { ref, remove } = window.firebaseRefs;
-            const { database } = window.firebase;
-            
-            console.log('Clearing Firebase data...');
-            const matchRef = ref(database, CURRENT_MATCH_REF);
-            const matchesRef = ref(database, MATCH_REF);
-            
-            await remove(matchRef);
-            await remove(matchesRef);
-            console.log('Firebase data cleared');
-          }
-        } catch (error) {
-          console.error('Error clearing Firebase:', error);
-        }
-        
-        // Limpiar localStorage
-        localStorage.removeItem(MATCH_KEY);
-        localStorage.removeItem(MATCHES_KEY);
-        
-        // Crear nueva partida
-        match = defaultMatch();
-        bindHeaderInputs();
-        recalcAndRender();
-        
-        console.log('Reset completed, new match created:', match);
-      });
-    }
 
 
 
-    // Botón temporal de test de datos
-    const tempTestBtn = document.getElementById('temp-test-btn');
-    if (tempTestBtn) {
-      tempTestBtn.addEventListener('click', async () => {
-        console.log('🔍 Testing data availability...');
-        
-        try {
-          // Verificar Firebase
-          if (window.firebase && window.firebaseRefs) {
-            console.log('✅ Firebase available');
-            
-            // Probar cargar partidas
-            const matches = await loadMatches();
-            console.log('📊 Matches in Firebase:', matches);
-            console.log('📊 Matches length:', matches.length);
-            
-            // Probar cargar partida actual
-            const currentMatch = await loadMatch();
-            console.log('🎲 Current match:', currentMatch);
-            
-            // Verificar localStorage como backup
-            const localMatches = localStorage.getItem(MATCHES_KEY);
-            const localMatch = localStorage.getItem(MATCH_KEY);
-            console.log('💾 localStorage matches:', localMatches ? JSON.parse(localMatches) : null);
-            console.log('💾 localStorage current match:', localMatch ? JSON.parse(localMatch) : null);
-            
-            alert(`🔍 Test completado!\n\nFirebase: ${matches.length} partidas\nPartida actual: ${currentMatch ? 'Sí' : 'No'}\nlocalStorage: ${localMatches ? 'Sí' : 'No'}`);
-          } else {
-            console.error('❌ Firebase not available');
-            alert('❌ Firebase no está disponible');
-          }
-        } catch (error) {
-          console.error('❌ Test error:', error);
-          alert('❌ Error en test: ' + error.message);
-        }
-      });
-    }
+
+
 
     // Inicialización
     initializeMatch().then(() => {
