@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Liga Dominó y Romo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import { getDatabase, ref, set, get, push, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyALR-b68phh_u92V3rw9B9Ei7FcexU2xc8",
+        authDomain: "proyectos17-98695.firebaseapp.com",
+        databaseURL: "https://proyectos17-98695-default-rtdb.firebaseio.com",
+        projectId: "proyectos17-98695",
+        storageBucket: "proyectos17-98695.firebasestorage.app",
+        messagingSenderId: "951673973410",
+        appId: "1:951673973410:web:25eb8fbc37a18cf28645fb",
+        measurementId: "G-XMNRJBKCZD"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      const analytics = getAnalytics(app);
+
+      // Hacer Firebase disponible globalmente
+      window.firebase = { app, database, analytics };
+      window.firebaseRefs = { ref, set, get, push, onValue, off };
+    </script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            colors: {
+              primary: {
+                50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+                400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+                800: '#1e40af', 900: '#1e3a8a'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      .winner { outline: 2px solid #16a34a; outline-offset: 4px; border-radius: 0.75rem; }
+      .badge { display:inline-flex; align-items:center; gap:0.25rem; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 text-slate-800 font-sans">
+
+  <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo</span>
+      </h1>
+      <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
+        <span id="connection-status" class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8" role="main">
+
+
+
+    <!-- Historial de partidas -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6 hidden" aria-labelledby="historial-title" id="historial-section">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 id="historial-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-slate-500">📊</span> Historial de Partidas
+        </h2>
+        <div class="flex items-center gap-2">
+          <button id="export-csv" class="inline-flex items-center gap-2 rounded-xl bg-green-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-green-700">
+            📥 Exportar CSV
+          </button>
+          <button id="back-to-main" class="inline-flex items-center gap-2 rounded-xl bg-slate-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-slate-700">
+            ← Volver
+          </button>
+        </div>
+      </div>
+      
+      <!-- Filtros -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div>
+          <label for="filter-fecha-desde" class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
+          <input type="date" id="filter-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-fecha-hasta" class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
+          <input type="date" id="filter-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-jugador" class="block text-sm font-semibold text-slate-700 mb-1">Jugador</label>
+          <input type="text" id="filter-jugador" placeholder="Buscar jugador..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-modalidad" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
+          <select id="filter-modalidad" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Todas</option>
+            <option value="100">100</option>
+            <option value="150">150</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" id="filter-solo-lisas" class="rounded border-slate-300 focus:ring-primary-500">
+            Solo mostrar lisas
+          </label>
+        </div>
+        <div class="md:col-span-2 flex items-end">
+          <button id="clear-filters" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Estadísticas resumen -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-blue-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-blue-600" id="stats-total">0</div>
+          <div class="text-sm text-blue-600">Total partidas</div>
+        </div>
+        <div class="bg-green-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-green-600" id="stats-lisas">0</div>
+          <div class="text-sm text-green-600">Lisas</div>
+        </div>
+        <div class="bg-purple-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-purple-600" id="stats-promedio">0</div>
+          <div class="text-sm text-purple-600">Puntos promedio</div>
+        </div>
+        <div class="bg-orange-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-orange-600" id="stats-duracion">0</div>
+          <div class="text-sm text-orange-600">Rondas promedio</div>
+        </div>
+      </div>
+
+      <!-- Tabla de historial -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-slate-100" id="sort-fecha">
+                Fecha
+                <svg class="w-4 h-4 inline ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </th>
+              <th class="px-4 py-3 text-left font-semibold">Mesa</th>
+              <th class="px-4 py-3 text-left font-semibold">Modalidad</th>
+              <th class="px-4 py-3 text-left font-semibold">Equipo A</th>
+              <th class="px-4 py-3 text-left font-semibold">Puntos A</th>
+              <th class="px-4 py-3 text-left font-semibold">Equipo B</th>
+              <th class="px-4 py-3 text-left font-semibold">Puntos B</th>
+              <th class="px-4 py-3 text-left font-semibold">Ganador</th>
+              <th class="px-4 py-3 text-left font-semibold">Lisa</th>
+            </tr>
+          </thead>
+          <tbody id="historial-body" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+      
+      <div id="no-results" class="text-center py-8 text-slate-500 hidden">
+        No se encontraron partidas con los filtros aplicados.
+      </div>
+    </section>
+
+    <!-- Modal de detalles de partida -->
+    <div id="match-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-blue-500">🎲</span> Detalles de la Partida
+          </h3>
+          <button id="close-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+        </div>
+        
+        <div class="p-6 space-y-6">
+          <!-- Información general -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Fecha</div>
+              <div id="modal-fecha" class="text-lg font-semibold">-</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Mesa</div>
+              <div id="modal-mesa" class="text-lg font-semibold">-</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Modalidad</div>
+              <div id="modal-modalidad" class="text-lg font-semibold">-</div>
+            </div>
+          </div>
+
+          <!-- Equipos y resultado -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-slate-200 rounded-xl p-4" id="modal-team-a">
+              <div class="text-center mb-4">
+                <h4 class="text-lg font-bold text-slate-800">Equipo A</h4>
+                <div id="modal-players-a" class="text-slate-600 mt-1">-</div>
+              </div>
+              <div class="text-center">
+                <div id="modal-total-a" class="text-4xl font-extrabold text-slate-800">0</div>
+                <div class="text-sm text-slate-600">Puntos totales</div>
+              </div>
+            </div>
+            
+            <div class="border border-slate-200 rounded-xl p-4" id="modal-team-b">
+              <div class="text-center mb-4">
+                <h4 class="text-lg font-bold text-slate-800">Equipo B</h4>
+                <div id="modal-players-b" class="text-slate-600 mt-1">-</div>
+              </div>
+              <div class="text-center">
+                <div id="modal-total-b" class="text-4xl font-extrabold text-slate-800">0</div>
+                <div class="text-sm text-slate-600">Puntos totales</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultado -->
+          <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Ganador</div>
+                <div id="modal-ganador" class="text-lg font-bold text-green-800">-</div>
+              </div>
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Lisa</div>
+                <div id="modal-lisa" class="text-lg font-bold text-green-800">-</div>
+              </div>
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Duración</div>
+                <div id="modal-duracion" class="text-lg font-bold text-green-800">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rondas detalladas -->
+          <div>
+            <h4 class="text-lg font-bold text-slate-800 mb-4">Desarrollo de la Partida</h4>
+            <div class="bg-slate-50 rounded-xl p-4">
+              <div class="grid grid-cols-4 gap-4 text-sm font-semibold text-slate-600 mb-3">
+                <div>Ronda</div>
+                <div>Equipo A</div>
+                <div>Equipo B</div>
+                <div>Acumulado</div>
+              </div>
+              <div id="modal-rounds" class="space-y-2">
+                <!-- Las rondas se llenarán dinámicamente -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Estadísticas adicionales -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-xl text-center">
+              <div id="modal-rondas-total" class="text-2xl font-bold text-blue-600">0</div>
+              <div class="text-sm text-blue-600">Rondas jugadas</div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-xl text-center">
+              <div id="modal-promedio-ronda" class="text-2xl font-bold text-purple-600">0</div>
+              <div class="text-sm text-purple-600">Puntos por ronda</div>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-xl text-center">
+              <div id="modal-diferencia" class="text-2xl font-bold text-orange-600">0</div>
+              <div class="text-sm text-orange-600">Diferencia final</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle de partida -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6" aria-labelledby="detalle-title" id="detalle-section">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="detalle-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-indigo-500">🎲</span> Detalle de Partida
+        </h2>
+        <div class="flex items-center gap-2 text-sm">
+          <span id="match-status" class="badge bg-yellow-100 text-yellow-700">En curso</span>
+        </div>
+      </div>
+
+      <form class="space-y-6" aria-describedby="ayuda-detalle">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label for="fecha" class="block text-sm font-semibold text-slate-700 mb-1">Fecha</label>
+            <input type="date" id="fecha" name="fecha" placeholder="DD/MM/AAAA" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+          </div>
+          <div>
+            <label for="mesa" class="block text-sm font-semibold text-slate-700 mb-1">Mesa</label>
+            <input type="number" id="mesa" name="mesa" placeholder="Número de Mesa" min="1" step="1" inputmode="numeric" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+          </div>
+          <div>
+            <label for="target" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad (puntos objetivo)</label>
+            <select id="target" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="100">100</option>
+              <option value="150">150</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-800 mb-3">Equipos</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="rounded-xl border border-slate-200 p-4" id="cardA">
+              <fieldset>
+                <legend class="text-sm font-semibold text-slate-700">Equipo A</legend>
+                <label for="equipoA-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
+                <input id="equipoA-jugador1" name="equipoA-jugador1" type="text" placeholder="Jugador 1" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <label for="equipoA-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
+                <input id="equipoA-jugador2" name="equipoA-jugador2" type="text" placeholder="Jugador 2" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              </fieldset>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4" id="cardB">
+              <fieldset>
+                <legend class="text-sm font-semibold text-slate-700">Equipo B</legend>
+                <label for="equipoB-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
+                <input id="equipoB-jugador1" name="equipoB-jugador1" type="text" placeholder="Jugador 1" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <label for="equipoB-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
+                <input id="equipoB-jugador2" name="equipoB-jugador2" type="text" placeholder="Jugador 2" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+              </fieldset>
+            </div>
+          </div>
+                </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-slate-800">Rondas</h3>
+            <div class="flex items-center gap-2">
+              <button id="add-round" type="button" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-primary-700 active:bg-primary-800">+ Agregar ronda</button>
+              <button id="finalize-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-emerald-700 active:bg-emerald-800">Finalizar partida</button>
+              <button id="new-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold shadow hover:bg-slate-200 active:bg-slate-300">Nueva partida</button>
+                </div>
+            </div>
+
+                    <div class="rounded-2xl border border-slate-200 overflow-hidden">
+            <div class="grid grid-cols-12 bg-slate-50 text-sm font-semibold text-slate-600">
+              <div class="col-span-2 px-4 py-3">Ronda</div>
+              <div class="col-span-4 px-4 py-3">Equipo A</div>
+              <div class="col-span-4 px-4 py-3">Equipo B</div>
+              <div class="col-span-2 px-4 py-3">Acción</div>
+            </div>
+            <div id="rounds-list" class="divide-y divide-slate-200"></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Total Equipo A</div>
+              <div id="total-a" class="text-3xl font-extrabold mt-1">0</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Objetivo</div>
+              <div class="flex items-center gap-2 mt-1">
+                <div id="target-display" class="text-2xl font-extrabold">100</div>
+                <span id="progress-badge" class="badge bg-blue-100 text-blue-700">En curso</span>
+              </div>
+              <div class="mt-3">
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div id="progress-bar" class="h-2 bg-gradient-to-r from-primary-500 to-emerald-500" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="mt-3 space-y-1">
+                <div class="text-sm text-slate-600">Ganador: <span id="winner-text" class="font-semibold">-</span></div>
+                <div class="text-sm text-slate-600">Lisa: <span id="lisa-text" class="font-semibold">-</span></div>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Total Equipo B</div>
+              <div id="total-b" class="text-3xl font-extrabold mt-1">0</div>
+                </div>
+            </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Clasificatoria (solo lectura, calculada de partidas finalizadas) -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6" aria-labelledby="clasificatoria-title" id="clasificatoria-section">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 id="clasificatoria-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-yellow-500">🏆</span> Clasificatoria
+        </h2>
+        <button id="show-history" class="inline-flex items-center gap-2 rounded-xl bg-slate-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-slate-700 active:bg-slate-800">
+          <span>📊</span> Ver Historial
+        </button>
+      </div>
+      <p class="text-sm text-slate-600 mb-3">Eficiencia = Victorias / (Victorias + Derrotas). Se calcula automáticamente a partir de partidas finalizadas.</p>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold">Jugador</th>
+              <th class="px-4 py-3 text-left font-semibold">Victorias</th>
+              <th class="px-4 py-3 text-left font-semibold">Derrotas</th>
+              <th class="px-4 py-3 text-left font-semibold">Total</th>
+              <th class="px-4 py-3 text-left font-semibold">
+                <button id="sort-efficiency" class="inline-flex items-center gap-1 hover:text-primary-700">
+                  Eficiencia %
+                  <svg id="eff-sort-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 3a1 1 0 01.832.445l4 6A1 1 0 0114 11H6a1 1 0 01-.832-1.555l4-6A1 1 0 0110 3zm-4 8a1 1 0 100 2h8a1 1 0 100-2H6zm0 4a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="clasificacion-body" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
+    <p>© 2024 Liga Dominó y Romo</p>
+  </footer>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // ======================
+    // Clasificatoria (derivada de historial) - Firebase
+    // ======================
+    const MATCHES_KEY = 'domino_matches_v1';
+    const MATCH_REF = 'domino_matches';
+    const CURRENT_MATCH_REF = 'current_match';
+
+    // Función para esperar a que Firebase esté disponible
+    function waitForFirebase() {
+      return new Promise((resolve) => {
+        if (window.firebase && window.firebaseRefs) {
+          resolve();
+        } else {
+          const checkInterval = setInterval(() => {
+            if (window.firebase && window.firebaseRefs) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+        }
+      });
+    }
+
+    async function loadMatches() {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const matchesRef = ref(database, MATCH_REF);
+        const snapshot = await get(matchesRef);
+        
+        if (snapshot.exists()) {
+          return Object.values(snapshot.val()) || [];
+        }
+        return [];
+      } catch (error) {
+        console.error('Error loading matches from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        try {
+          const raw = localStorage.getItem(MATCHES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      }
+    }
+
+    async function saveMatches(list) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const matchesRef = ref(database, MATCH_REF);
+        await set(matchesRef, list);
+        
+        // También guardar en localStorage como backup
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+      } catch (error) {
+        console.error('Error saving matches to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+      }
+    }
+
+    function canonicalName(name) {
+      return (name || '').trim();
+    }
+
+    function deriveStatsFromMatches(matches) {
+      const nameToStats = new Map();
+      const ensure = (name) => {
+        const key = canonicalName(name);
+        if (!key) return null;
+        if (!nameToStats.has(key)) nameToStats.set(key, { name: key, wins: 0, losses: 0 });
+        return nameToStats.get(key);
+      };
+
+      for (const m of matches) {
+        if (!m || !m.closedAt) continue;
+        const totalA = Number(m.totalA || 0);
+        const totalB = Number(m.totalB || 0);
+        let winner = null;
+        if (totalA > totalB) winner = 'A';
+        else if (totalB > totalA) winner = 'B';
+        if (!winner) continue;
+
+        const playersA = [m.teamA?.j1, m.teamA?.j2];
+        const playersB = [m.teamB?.j1, m.teamB?.j2];
+
+        if (winner === 'A') {
+          playersA.forEach(n => { const s = ensure(n); if (s) s.wins += 1; });
+          playersB.forEach(n => { const s = ensure(n); if (s) s.losses += 1; });
+        } else {
+          playersB.forEach(n => { const s = ensure(n); if (s) s.wins += 1; });
+          playersA.forEach(n => { const s = ensure(n); if (s) s.losses += 1; });
+        }
+      }
+
+      return Array.from(nameToStats.values());
+    }
+
+    function compute(player) {
+      const total = Number(player.wins || 0) + Number(player.losses || 0);
+      const eff = total > 0 ? (Number(player.wins || 0) / total) * 100 : 0;
+      return { total, eff };
+    }
+
+    let sortDesc = true; // ordenar por eficiencia descendente
+    const tbody = document.getElementById('clasificacion-body');
+    const sortBtn = document.getElementById('sort-efficiency');
+    const sortIcon = document.getElementById('eff-sort-icon');
+
+    function renderClasificatoria() {
+      const matches = loadMatches();
+      const players = deriveStatsFromMatches(matches);
+
+      players.sort((a, b) => {
+        const ea = compute(a).eff;
+        const eb = compute(b).eff;
+        return sortDesc ? eb - ea : ea - eb;
+      });
+
+      tbody.innerHTML = '';
+      players.forEach((p) => {
+        const { total, eff } = compute(p);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+
+        const tdName = document.createElement('td');
+        tdName.className = 'px-4 py-3';
+        tdName.textContent = p.name || '-';
+
+        const tdW = document.createElement('td');
+        tdW.className = 'px-4 py-3';
+        tdW.textContent = String(p.wins || 0);
+
+        const tdL = document.createElement('td');
+        tdL.className = 'px-4 py-3';
+        tdL.textContent = String(p.losses || 0);
+
+        const tdT = document.createElement('td');
+        tdT.className = 'px-4 py-3 text-slate-700';
+        tdT.textContent = String(total);
+
+        const tdE = document.createElement('td');
+        tdE.className = 'px-4 py-3';
+        const effWrap = document.createElement('div');
+        effWrap.className = 'space-y-1';
+        const barWrap = document.createElement('div');
+        barWrap.className = 'w-40 h-2 bg-slate-200 rounded-full overflow-hidden';
+        const bar = document.createElement('div');
+        bar.className = 'h-2 bg-gradient-to-r from-primary-500 to-green-500';
+        bar.style.width = Math.max(0, Math.min(100, eff)).toFixed(0) + '%';
+        barWrap.appendChild(bar);
+        const effText = document.createElement('div');
+        effText.className = 'text-xs text-slate-600';
+        effText.textContent = `${eff.toFixed(1)}%`;
+        effWrap.appendChild(barWrap);
+        effWrap.appendChild(effText);
+        tdE.appendChild(effWrap);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdW);
+        tr.appendChild(tdL);
+        tr.appendChild(tdT);
+        tr.appendChild(tdE);
+        tbody.appendChild(tr);
+      });
+
+      sortIcon.style.transform = sortDesc ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
+    sortBtn.addEventListener('click', () => {
+      sortDesc = !sortDesc;
+      renderClasificatoria();
+    });
+
+    renderClasificatoria();
+
+    // ======================
+    // Historial de partidas
+    // ======================
+    const showHistoryBtn = document.getElementById('show-history');
+    const backToMainBtn = document.getElementById('back-to-main');
+    const exportCsvBtn = document.getElementById('export-csv');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    const sortFechaBtn = document.getElementById('sort-fecha');
+
+    const clasificatoriaSection = document.getElementById('clasificatoria-section');
+    const historialSection = document.getElementById('historial-section');
+    const detalleSection = document.getElementById('detalle-section');
+    
+    const filterFechaDesde = document.getElementById('filter-fecha-desde');
+    const filterFechaHasta = document.getElementById('filter-fecha-hasta');
+    const filterJugador = document.getElementById('filter-jugador');
+    const filterModalidad = document.getElementById('filter-modalidad');
+    const filterSoloLisas = document.getElementById('filter-solo-lisas');
+
+    const historialBody = document.getElementById('historial-body');
+    const noResults = document.getElementById('no-results');
+    
+    const statsTotal = document.getElementById('stats-total');
+    const statsLisas = document.getElementById('stats-lisas');
+    const statsPromedio = document.getElementById('stats-promedio');
+    const statsDuracion = document.getElementById('stats-duracion');
+
+    // Modal elements
+    const modal = document.getElementById('match-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+
+    let historialSortDesc = true;
+    let allMatchesData = []; // Para almacenar los datos completos incluyendo rounds
+
+    function showHistorial() {
+      clasificatoriaSection.classList.add('hidden');
+      detalleSection.classList.add('hidden');
+      historialSection.classList.remove('hidden');
+      renderHistorial();
+    }
+
+    function showMain() {
+      historialSection.classList.add('hidden');
+      clasificatoriaSection.classList.remove('hidden');
+      detalleSection.classList.remove('hidden');
+    }
+
+    function filterMatches(matches) {
+      return matches.filter(match => {
+        // Filtro por fecha
+        if (filterFechaDesde.value && match.fecha < filterFechaDesde.value) return false;
+        if (filterFechaHasta.value && match.fecha > filterFechaHasta.value) return false;
+
+        // Filtro por jugador
+        if (filterJugador.value) {
+          const searchTerm = filterJugador.value.toLowerCase();
+          const allPlayers = [
+            match.teamA?.j1, match.teamA?.j2,
+            match.teamB?.j1, match.teamB?.j2
+          ].filter(p => p).map(p => p.toLowerCase());
+          if (!allPlayers.some(p => p.includes(searchTerm))) return false;
+        }
+
+        // Filtro por modalidad
+        if (filterModalidad.value && String(match.target) !== filterModalidad.value) return false;
+
+        // Filtro solo lisas
+        if (filterSoloLisas.checked && !match.lisa) return false;
+
+        return true;
+      });
+    }
+
+    function calculateStats(matches) {
+      const total = matches.length;
+      const lisas = matches.filter(m => m.lisa).length;
+      const totalPuntos = matches.reduce((sum, m) => sum + (m.totalA || 0) + (m.totalB || 0), 0);
+      const promedioPuntos = total > 0 ? Math.round(totalPuntos / (total * 2)) : 0;
+      
+      // Calcular rondas promedio (aproximado basado en puntos)
+      const promedioRondas = total > 0 ? Math.round(promedioPuntos / 15) : 0; // Estimación
+      
+      return { total, lisas, promedioPuntos, promedioRondas };
+    }
+
+    function renderHistorial() {
+      const allMatches = loadMatches();
+      const filteredMatches = filterMatches(allMatches);
+      
+      // Ordenar por fecha
+      filteredMatches.sort((a, b) => {
+        const dateA = new Date(a.fecha || a.closedAt);
+        const dateB = new Date(b.fecha || b.closedAt);
+        return historialSortDesc ? dateB - dateA : dateA - dateB;
+      });
+
+      // Actualizar estadísticas
+      const stats = calculateStats(filteredMatches);
+      statsTotal.textContent = stats.total;
+      statsLisas.textContent = stats.lisas;
+      statsPromedio.textContent = stats.promedioPuntos;
+      statsDuracion.textContent = stats.promedioRondas;
+
+      // Renderizar tabla
+      historialBody.innerHTML = '';
+      
+      if (filteredMatches.length === 0) {
+        noResults.classList.remove('hidden');
+        return;
+      }
+      
+      noResults.classList.add('hidden');
+      
+      filteredMatches.forEach(match => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50';
+
+        const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+        const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+        const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+        
+        let ganador = '-';
+        if (match.winner === 'A') ganador = 'Equipo A';
+        else if (match.winner === 'B') ganador = 'Equipo B';
+
+        row.innerHTML = `
+          <td class="px-4 py-3">${fecha}</td>
+          <td class="px-4 py-3">${match.mesa || '-'}</td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              ${match.target}
+            </span>
+          </td>
+          <td class="px-4 py-3 max-w-32 truncate" title="${equipoA}">${equipoA}</td>
+          <td class="px-4 py-3 font-semibold ${match.winner === 'A' ? 'text-green-600' : ''}">${match.totalA || 0}</td>
+          <td class="px-4 py-3 max-w-32 truncate" title="${equipoB}">${equipoB}</td>
+          <td class="px-4 py-3 font-semibold ${match.winner === 'B' ? 'text-green-600' : ''}">${match.totalB || 0}</td>
+          <td class="px-4 py-3">
+            ${match.winner ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">${ganador}</span>` : '-'}
+          </td>
+          <td class="px-4 py-3">
+            ${match.lisa ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sí</span>' : '<span class="text-slate-400">No</span>'}
+          </td>
+        `;
+        
+        // Hacer la fila clickeable
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Row clicked, calling showMatchDetails');
+          showMatchDetails(match);
+        });
+        
+        historialBody.appendChild(row);
+      });
+    }
+
+    function exportToCsv() {
+      const allMatches = loadMatches();
+      const filteredMatches = filterMatches(allMatches);
+      
+      if (filteredMatches.length === 0) {
+        alert('No hay partidas para exportar con los filtros actuales.');
+        return;
+      }
+
+      const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa'];
+      const rows = filteredMatches.map(match => {
+        const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+        const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+        const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+        
+        let ganador = '-';
+        if (match.winner === 'A') ganador = 'Equipo A';
+        else if (match.winner === 'B') ganador = 'Equipo B';
+
+        return [
+          fecha,
+          match.mesa || '-',
+          match.target,
+          equipoA,
+          match.totalA || 0,
+          equipoB,
+          match.totalB || 0,
+          ganador,
+          match.lisa ? 'Sí' : 'No'
+        ];
+      });
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `historial_domino_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function clearFilters() {
+      filterFechaDesde.value = '';
+      filterFechaHasta.value = '';
+      filterJugador.value = '';
+      filterModalidad.value = '';
+      filterSoloLisas.checked = false;
+      renderHistorial();
+    }
+
+    function showMatchDetails(match) {
+      console.log('showMatchDetails called with:', match);
+      
+      // Verificar que el modal existe
+      if (!modal) {
+        console.error('Modal element not found!');
+        return;
+      }
+      
+      // Información general
+      const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      const modalFecha = document.getElementById('modal-fecha');
+      const modalMesa = document.getElementById('modal-mesa');
+      const modalModalidad = document.getElementById('modal-modalidad');
+      
+      if (modalFecha) modalFecha.textContent = fecha;
+      if (modalMesa) modalMesa.textContent = match.mesa || 'No especificada';
+      if (modalModalidad) modalModalidad.textContent = `${match.target} puntos`;
+
+      // Equipos
+      const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+      const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+      
+      const modalPlayersA = document.getElementById('modal-players-a');
+      const modalPlayersB = document.getElementById('modal-players-b');
+      const modalTotalA = document.getElementById('modal-total-a');
+      const modalTotalB = document.getElementById('modal-total-b');
+      
+      if (modalPlayersA) modalPlayersA.textContent = equipoA;
+      if (modalPlayersB) modalPlayersB.textContent = equipoB;
+      if (modalTotalA) modalTotalA.textContent = match.totalA || 0;
+      if (modalTotalB) modalTotalB.textContent = match.totalB || 0;
+
+      // Resaltar equipo ganador
+      const teamAEl = document.getElementById('modal-team-a');
+      const teamBEl = document.getElementById('modal-team-b');
+      
+      if (teamAEl && teamBEl) {
+        teamAEl.classList.remove('border-green-400', 'bg-green-50');
+        teamBEl.classList.remove('border-green-400', 'bg-green-50');
+        
+        if (match.winner === 'A') {
+          teamAEl.classList.add('border-green-400', 'bg-green-50');
+        } else if (match.winner === 'B') {
+          teamBEl.classList.add('border-green-400', 'bg-green-50');
+        }
+      }
+
+      // Resultado
+      let ganador = 'Empate';
+      if (match.winner === 'A') ganador = 'Equipo A';
+      else if (match.winner === 'B') ganador = 'Equipo B';
+      
+      const modalGanador = document.getElementById('modal-ganador');
+      const modalLisa = document.getElementById('modal-lisa');
+      
+      if (modalGanador) modalGanador.textContent = ganador;
+      if (modalLisa) modalLisa.textContent = match.lisa ? 'Sí' : 'No';
+
+      // Usar las rondas reales de la partida
+      let rounds = match.rounds || [];
+      let playedRounds = rounds;
+      const modalRounds = document.getElementById('modal-rounds');
+      
+      // Si no hay rondas guardadas, mostrar mensaje
+      if (rounds.length === 0) {
+        const modalDuracionTemp = document.getElementById('modal-duracion');
+        if (modalDuracionTemp) modalDuracionTemp.textContent = 'Sin datos de rondas';
+        modalRounds.innerHTML = `
+          <div class="text-center py-4 text-slate-500">
+            <p>No hay datos detallados de rondas para esta partida.</p>
+            <p class="text-sm mt-1">Solo se muestran los totales finales.</p>
+          </div>
+        `;
+      } else {
+        // Simular el desarrollo real de la partida respetando la regla "primero en llegar"
+        modalRounds.innerHTML = '';
+        
+        let acumA = 0, acumB = 0;
+        let finalRoundIndex = rounds.length;
+        
+        // Encontrar en qué ronda se alcanzó realmente el objetivo
+        for (let i = 0; i < rounds.length; i++) {
+          const tempA = acumA + (rounds[i].a || 0);
+          const tempB = acumB + (rounds[i].b || 0);
+          
+          acumA = tempA;
+          acumB = tempB;
+          
+          // Si alguien alcanzó el objetivo, esta es la ronda final
+          if (acumA >= match.target || acumB >= match.target) {
+            finalRoundIndex = i + 1;
+            break;
+          }
+        }
+        
+        // Mostrar solo las rondas que realmente se jugaron
+        playedRounds = rounds.slice(0, finalRoundIndex);
+        const modalDuracionTemp2 = document.getElementById('modal-duracion');
+        if (modalDuracionTemp2) modalDuracionTemp2.textContent = `${playedRounds.length} rondas`;
+        
+        // Recalcular acumulados para mostrar correctamente
+        acumA = 0;
+        acumB = 0;
+        
+        playedRounds.forEach((round, index) => {
+          acumA += round.a || 0;
+          acumB += round.b || 0;
+          
+          const roundDiv = document.createElement('div');
+          roundDiv.className = 'grid grid-cols-4 gap-4 py-2 border-b border-slate-200 last:border-b-0';
+          
+          const isWinningRound = (acumA >= match.target || acumB >= match.target) && index === playedRounds.length - 1;
+          const roundClass = isWinningRound ? 'font-bold text-green-600' : '';
+          
+          roundDiv.innerHTML = `
+            <div class="${roundClass}">Ronda ${index + 1}</div>
+            <div class="${roundClass}">${round.a || 0}</div>
+            <div class="${roundClass}">${round.b || 0}</div>
+            <div class="${roundClass}">${acumA} - ${acumB}</div>
+          `;
+          
+          modalRounds.appendChild(roundDiv);
+        });
+      }
+
+      // Estadísticas adicionales basadas en las rondas realmente jugadas
+      const totalRounds = playedRounds.length;
+      const totalPuntos = (match.totalA || 0) + (match.totalB || 0);
+      const promedioPorRonda = totalRounds > 0 ? Math.round(totalPuntos / totalRounds) : 0;
+      const diferencia = Math.abs((match.totalA || 0) - (match.totalB || 0));
+      
+      const modalRondasTotal = document.getElementById('modal-rondas-total');
+      const modalPromedioRonda = document.getElementById('modal-promedio-ronda');
+      const modalDiferencia = document.getElementById('modal-diferencia');
+      const modalDuracion = document.getElementById('modal-duracion');
+      
+      if (modalRondasTotal) modalRondasTotal.textContent = totalRounds;
+      if (modalPromedioRonda) modalPromedioRonda.textContent = promedioPorRonda;
+      if (modalDiferencia) modalDiferencia.textContent = diferencia;
+      if (modalDuracion && rounds.length > 0) modalDuracion.textContent = `${totalRounds} rondas`;
+
+      console.log('About to show modal...');
+      // Mostrar modal
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      console.log('Modal should be visible now');
+    }
+
+    function hideMatchDetails() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Event listeners para historial
+    showHistoryBtn.addEventListener('click', showHistorial);
+    backToMainBtn.addEventListener('click', showMain);
+    exportCsvBtn.addEventListener('click', exportToCsv);
+    clearFiltersBtn.addEventListener('click', clearFilters);
+    
+    sortFechaBtn.addEventListener('click', () => {
+      historialSortDesc = !historialSortDesc;
+      renderHistorial();
+    });
+
+    // Event listeners para modal
+    closeModalBtn.addEventListener('click', hideMatchDetails);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        hideMatchDetails();
+      }
+    });
+    
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        hideMatchDetails();
+      }
+    });
+
+    // Filtros en tiempo real
+    [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
+      filter.addEventListener('input', renderHistorial);
+      filter.addEventListener('change', renderHistorial);
+    });
+
+    // ======================
+    // Partida en curso (detalle) - Firebase
+    // ======================
+    const MATCH_KEY = 'domino_current_match_v1';
+    const matchStatus = document.getElementById('match-status');
+    const targetSelect = document.getElementById('target');
+    const targetDisplay = document.getElementById('target-display');
+    const progressBar = document.getElementById('progress-bar');
+    const progressBadge = document.getElementById('progress-badge');
+    const addRoundBtn = document.getElementById('add-round');
+    const finalizeBtn = document.getElementById('finalize-match');
+    const newMatchBtn = document.getElementById('new-match');
+    const roundsList = document.getElementById('rounds-list');
+
+    const totalAEl = document.getElementById('total-a');
+    const totalBEl = document.getElementById('total-b');
+    const winnerText = document.getElementById('winner-text');
+    const lisaText = document.getElementById('lisa-text');
+
+    const cardA = document.getElementById('cardA');
+    const cardB = document.getElementById('cardB');
+
+    const fechaInput = document.getElementById('fecha');
+    const mesaInput = document.getElementById('mesa');
+    const a1 = document.getElementById('equipoA-jugador1');
+    const a2 = document.getElementById('equipoA-jugador2');
+    const b1 = document.getElementById('equipoB-jugador1');
+    const b2 = document.getElementById('equipoB-jugador2');
+
+    let autoFinalizing = false;
+
+    function randId() {
+      const rand = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 1e9);
+      return 'm_' + rand.toString(16);
+    }
+
+    function todayYmd() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function defaultMatch() {
+      return {
+        id: randId(),
+        inProgress: true,
+        fecha: todayYmd(),
+        mesa: '',
+        target: 100,
+        teamA: { j1: '', j2: '' },
+        teamB: { j1: '', j2: '' },
+        rounds: [], // { a:number, b:number }
+        closedAt: null
+      };
+    }
+
+    function startNewMatch(preserve = true) {
+      const prev = match;
+      match = defaultMatch();
+      if (preserve && prev) {
+        match.mesa = prev.mesa || '';
+        match.target = prev.target || 100;
+        match.teamA = { j1: prev.teamA?.j1 || '', j2: prev.teamA?.j2 || '' };
+        match.teamB = { j1: prev.teamB?.j1 || '', j2: prev.teamB?.j2 || '' };
+      }
+      saveMatch(match);
+      bindHeaderInputs();
+      recalcAndRender();
+    }
+
+    async function loadMatch() {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const matchRef = ref(database, CURRENT_MATCH_REF);
+        const snapshot = await get(matchRef);
+        
+        if (snapshot.exists()) {
+          const parsed = snapshot.val();
+          return Object.assign(defaultMatch(), parsed);
+        }
+        return defaultMatch();
+      } catch (error) {
+        console.error('Error loading match from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        try {
+          const raw = localStorage.getItem(MATCH_KEY);
+          if (!raw) return defaultMatch();
+          const parsed = JSON.parse(raw);
+          return Object.assign(defaultMatch(), parsed);
+        } catch {
+          return defaultMatch();
+        }
+      }
+    }
+
+    async function saveMatch(m) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const matchRef = ref(database, CURRENT_MATCH_REF);
+        await set(matchRef, m);
+        
+        // También guardar en localStorage como backup
+        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+      } catch (error) {
+        console.error('Error saving match to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+      }
+    }
+
+    let match = null;
+
+    async function initializeMatch() {
+      match = await loadMatch();
+      bindHeaderInputs();
+      recalcAndRender();
+      
+      // Configurar sincronización en tiempo real
+      setupRealtimeSync();
+    }
+
+    function setupRealtimeSync() {
+      try {
+        if (window.firebase && window.firebaseRefs) {
+          const { ref, onValue } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          // Sincronizar partida actual
+          const matchRef = ref(database, CURRENT_MATCH_REF);
+          onValue(matchRef, (snapshot) => {
+            if (snapshot.exists() && !autoFinalizing) {
+              const updatedMatch = snapshot.val();
+              if (updatedMatch && updatedMatch.id !== match?.id) {
+                match = Object.assign(defaultMatch(), updatedMatch);
+                bindHeaderInputs();
+                recalcAndRender();
+              }
+            }
+          });
+
+          // Sincronizar historial de partidas
+          const matchesRef = ref(database, MATCH_REF);
+          onValue(matchesRef, (snapshot) => {
+            if (snapshot.exists()) {
+              renderClasificatoria();
+            }
+          });
+          
+          updateConnectionStatus(true);
+          console.log('Real-time sync enabled');
+        }
+      } catch (error) {
+        console.error('Error setting up real-time sync:', error);
+        updateConnectionStatus(false);
+      }
+    }
+
+    function updateConnectionStatus(connected) {
+      const statusEl = document.getElementById('connection-status');
+      if (statusEl) {
+        if (connected) {
+          statusEl.className = 'inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado';
+        } else {
+          statusEl.className = 'inline-flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Desconectado';
+        }
+      }
+    }
+
+    function bindHeaderInputs() {
+      fechaInput.value = match.fecha || '';
+      mesaInput.value = match.mesa || '';
+      targetSelect.value = String(match.target || 100);
+      targetDisplay.textContent = String(match.target || 100);
+
+      a1.value = match.teamA.j1 || '';
+      a2.value = match.teamA.j2 || '';
+      b1.value = match.teamB.j1 || '';
+      b2.value = match.teamB.j2 || '';
+
+      const setDisabled = !match.inProgress;
+      const hasRounds = match.rounds && match.rounds.length > 0;
+      
+      // Bloquear nombres de equipos si ya hay rondas iniciadas
+      const teamNamesLocked = hasRounds && match.inProgress;
+      
+      [fechaInput, mesaInput, targetSelect, addRoundBtn].forEach(el => { 
+        el.disabled = setDisabled; 
+        el.classList.toggle('opacity-60', setDisabled); 
+      });
+      
+      [a1, a2, b1, b2].forEach(el => { 
+        el.disabled = setDisabled || teamNamesLocked; 
+        el.classList.toggle('opacity-60', setDisabled || teamNamesLocked);
+        if (teamNamesLocked) {
+          el.classList.add('bg-gray-100', 'cursor-not-allowed');
+        } else {
+          el.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        }
+      });
+      
+      finalizeBtn.disabled = !match.inProgress;
+      newMatchBtn.disabled = false;
+
+      matchStatus.textContent = match.inProgress ? 'En curso' : 'Finalizada';
+      matchStatus.className = 'badge ' + (match.inProgress ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700');
+    }
+
+    function computeTotals() {
+      let totalA = 0;
+      let totalB = 0;
+      let winner = null;
+      
+      // Calcular totales ronda por ronda hasta que alguien llegue a la meta
+      for (const r of match.rounds) {
+        totalA += Number(r.a) || 0;
+        totalB += Number(r.b) || 0;
+        
+        // Verificar si alguien alcanzó el objetivo
+        if (totalA >= match.target) {
+          winner = 'A';
+          break;
+        } else if (totalB >= match.target) {
+          winner = 'B';
+          break;
+        }
+      }
+      
+      return { totalA, totalB, winner };
+    }
+
+    function renderRounds() {
+      roundsList.innerHTML = '';
+      match.rounds.forEach((r, idx) => {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-12 items-center py-2';
+
+        const c1 = document.createElement('div');
+        c1.className = 'col-span-2 px-4 py-3 text-base font-semibold text-slate-700';
+        c1.textContent = `${idx + 1}`;
+
+        const c2 = document.createElement('div');
+        c2.className = 'col-span-4 px-4 py-3';
+        const inA = document.createElement('input');
+        inA.type = 'number'; inA.min = '0'; inA.step = '1'; inA.inputMode = 'numeric';
+        inA.value = r.a ?? '';
+        inA.placeholder = '0';
+        
+        // Bloquear edición si ya tiene puntos confirmados (diferentes de undefined/null)
+        const hasPointsA = r.a !== undefined && r.a !== null;
+        const hasPointsB = r.b !== undefined && r.b !== null;
+        const isLocked = (hasPointsA && r.a > 0) || (hasPointsB && r.b > 0);
+        
+        inA.className = 'w-full h-12 rounded-xl border-2 px-4 py-3 text-lg font-bold text-center focus:outline-none shadow-sm ' + 
+          (isLocked ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-not-allowed' : 'border-slate-300 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500');
+        inA.disabled = !match.inProgress || isLocked;
+        if (!isLocked) {
+          inA.addEventListener('focus', () => inA.select());
+          inA.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              inA.blur(); // Esto activará el evento blur
+            }
+          });
+          inA.addEventListener('blur', () => {
+            // Solo confirmar si hay un valor válido
+            const value = parseInt(inA.value || '0', 10);
+            if (!isNaN(value) && value >= 0) {
+              r.a = value;
+              saveMatch(match);
+              recalcAndRender();
+            } else {
+              inA.value = r.a ?? '';
+            }
+          });
+        }
+        c2.appendChild(inA);
+
+        const c3 = document.createElement('div');
+        c3.className = 'col-span-4 px-4 py-3';
+        const inB = document.createElement('input');
+        inB.type = 'number'; inB.min = '0'; inB.step = '1'; inB.inputMode = 'numeric';
+        inB.value = r.b ?? '';
+        inB.placeholder = '0';
+        inB.className = 'w-full h-12 rounded-xl border-2 px-4 py-3 text-lg font-bold text-center focus:outline-none shadow-sm ' + 
+          (isLocked ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-not-allowed' : 'border-slate-300 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500');
+        inB.disabled = !match.inProgress || isLocked;
+        if (!isLocked) {
+          inB.addEventListener('focus', () => inB.select());
+          inB.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              inB.blur(); // Esto activará el evento blur
+            }
+          });
+          inB.addEventListener('blur', () => {
+            // Solo confirmar si hay un valor válido
+            const value = parseInt(inB.value || '0', 10);
+            if (!isNaN(value) && value >= 0) {
+              r.b = value;
+              saveMatch(match);
+              recalcAndRender();
+            } else {
+              inB.value = r.b ?? '';
+            }
+          });
+        }
+        c3.appendChild(inB);
+
+        const c4 = document.createElement('div');
+        c4.className = 'col-span-2 px-4 py-3';
+        const cDel = document.createElement('button');
+        cDel.type = 'button';
+        cDel.className = 'w-full h-10 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 text-sm font-semibold border border-red-200 transition-colors';
+        cDel.textContent = '✕';
+        cDel.disabled = !match.inProgress;
+        cDel.addEventListener('click', () => {
+          match.rounds.splice(idx, 1);
+          saveMatch(match);
+          recalcAndRender();
+        });
+        c4.appendChild(cDel);
+
+        row.appendChild(c1);
+        row.appendChild(c2);
+        row.appendChild(c3);
+        row.appendChild(c4);
+        roundsList.appendChild(row);
+      });
+    }
+
+    function recordFinalizedMatch() {
+      const { totalA, totalB, winner } = computeTotals();
+      // Lisa: un equipo no obtuvo ningún punto durante toda la partida
+      const lisa = totalA === 0 || totalB === 0;
+      const matches = loadMatches();
+      matches.push({
+        id: match.id,
+        fecha: match.fecha,
+        mesa: match.mesa,
+        target: match.target,
+        teamA: { j1: match.teamA.j1, j2: match.teamA.j2 },
+        teamB: { j1: match.teamB.j1, j2: match.teamB.j2 },
+        rounds: [...match.rounds], // Incluir las rondas para el modal
+        totalA,
+        totalB,
+        winner,
+        lisa,
+        closedAt: Date.now()
+      });
+      saveMatches(matches);
+      renderClasificatoria();
+    }
+
+    function autoFinalizeAndRestart() {
+      if (autoFinalizing || !match.inProgress) return;
+      autoFinalizing = true;
+      // Finalize current
+      match.inProgress = false;
+      match.closedAt = Date.now();
+      saveMatch(match);
+      bindHeaderInputs();
+      recalcAndRender();
+      // Record on leaderboard/history
+      recordFinalizedMatch();
+      // Brief pause to show result, then start new match preserving settings
+      setTimeout(() => {
+        autoFinalizing = false;
+        startNewMatch(true);
+      }, 1200);
+    }
+
+    function recalcAndRender() {
+      const { totalA, totalB, winner } = computeTotals();
+      totalAEl.textContent = String(totalA);
+      totalBEl.textContent = String(totalB);
+
+      const leader = Math.max(totalA, totalB);
+      const pct = Math.min(100, (leader / match.target) * 100);
+      progressBar.style.width = pct.toFixed(0) + '%';
+
+      // Mostrar ganador visual solo si está en curso y hay diferencia
+      cardA.classList.toggle('winner', totalA > totalB && match.inProgress);
+      cardB.classList.toggle('winner', totalB > totalA && match.inProgress);
+
+      const reached = winner !== null; // Alguien llegó a la meta
+      progressBadge.textContent = reached ? 'Objetivo alcanzado' : 'En curso';
+      progressBadge.className = 'badge ' + (reached ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700');
+      finalizeBtn.disabled = !match.inProgress || !reached;
+
+      if (!match.inProgress) {
+        let ganador = '-';
+        if (winner === 'A') ganador = 'Equipo A';
+        else if (winner === 'B') ganador = 'Equipo B';
+        winnerText.textContent = ganador;
+        // Lisa: un equipo no obtuvo ningún punto durante toda la partida
+        const esLisa = totalA === 0 || totalB === 0;
+        lisaText.textContent = esLisa ? 'Sí' : 'No';
+      } else {
+        winnerText.textContent = '-';
+        lisaText.textContent = '-';
+      }
+
+      renderRounds();
+
+      // Auto-finalize if target reached
+      if (match.inProgress && reached) {
+        autoFinalizeAndRestart();
+      }
+    }
+
+    // Binders
+    targetSelect.addEventListener('change', () => { match.target = parseInt(targetSelect.value, 10); targetDisplay.textContent = targetSelect.value; saveMatch(match); recalcAndRender(); });
+    fechaInput.addEventListener('change', () => { match.fecha = fechaInput.value; saveMatch(match); });
+    mesaInput.addEventListener('input', () => { match.mesa = mesaInput.value; saveMatch(match); });
+    a1.addEventListener('input', () => { match.teamA.j1 = a1.value; saveMatch(match); });
+    a2.addEventListener('input', () => { match.teamA.j2 = a2.value; saveMatch(match); });
+    b1.addEventListener('input', () => { match.teamB.j1 = b1.value; saveMatch(match); });
+    b2.addEventListener('input', () => { match.teamB.j2 = b2.value; saveMatch(match); });
+
+    addRoundBtn.addEventListener('click', () => {
+      if (!match.inProgress) return;
+      match.rounds.push({ a: 0, b: 0 });
+      saveMatch(match);
+      recalcAndRender();
+    });
+
+    finalizeBtn.addEventListener('click', () => {
+      autoFinalizeAndRestart();
+    });
+
+    newMatchBtn.addEventListener('click', () => {
+      startNewMatch(true);
+    });
+
+    // Inicialización
+    initializeMatch().then(() => {
+      if (!match.fecha) {
+        match.fecha = todayYmd();
+      }
+    }).catch(error => {
+      console.error('Error initializing match:', error);
+      // Fallback: crear match por defecto
+      match = defaultMatch();
+      bindHeaderInputs();
+      recalcAndRender();
+    });
+  });
+  </script>
+
+</body>
+</html>
