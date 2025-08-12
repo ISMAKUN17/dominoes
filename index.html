@@ -1,9 +1,9 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Liga Dominó y Romo - By Ismakun</title>
+    <title>Dashboard Liga Dominó y Romo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
@@ -11,7 +11,7 @@
     <script type="module">
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-      import { getDatabase, ref, set, get, push, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+      import { getDatabase, ref, set, get, push, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
       // Your web app's Firebase configuration
@@ -33,7 +33,19 @@
 
       // Hacer Firebase disponible globalmente
       window.firebase = { app, database, analytics };
-      window.firebaseRefs = { ref, set, get, push, onValue, off };
+      window.firebaseRefs = { ref, set, get, push, onValue, off, remove };
+      
+      console.log('Firebase initialized successfully');
+      console.log('Database:', database);
+      console.log('Analytics:', analytics);
+      
+      // Verificar que las funciones estén disponibles
+      if (ref && set && get && push && onValue && off && remove) {
+        console.log('✅ Todas las funciones de Firebase Database están disponibles');
+      } else {
+        console.error('❌ Algunas funciones de Firebase Database no están disponibles');
+        console.log('ref:', !!ref, 'set:', !!set, 'get:', !!get, 'push:', !!push, 'onValue:', !!onValue, 'off:', !!off, 'remove:', !!remove);
+      }
     </script>
     <script>
       tailwind.config = {
@@ -64,8 +76,8 @@
         <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo</span>
       </h1>
       <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
-        <span id="connection-status" class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full">
-          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado
+        <span id="connection-status" class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> Inicializando...
         </span>
       </div>
     </div>
@@ -344,7 +356,6 @@
               <button id="add-round" type="button" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-primary-700 active:bg-primary-800">+ Agregar ronda</button>
               <button id="finalize-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-emerald-700 active:bg-emerald-800">Finalizar partida</button>
               <button id="new-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold shadow hover:bg-slate-200 active:bg-slate-300">Nueva partida</button>
-              <button id="debug-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-red-100 text-red-700 px-3 py-2 text-sm font-semibold shadow hover:bg-red-200">🐛 Debug</button>
               <button id="reset-all" type="button" class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-red-700">🔄 Reset</button>
             </div>
           </div>
@@ -424,7 +435,7 @@
   </main>
 
   <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
-    <p>© 2025 Liga Dominó y Romo - By Ismakun</p>
+    <p>© 2024 Liga Dominó y Romo</p>
   </footer>
 
   <script>
@@ -438,37 +449,81 @@
 
     // Función para esperar a que Firebase esté disponible
     function waitForFirebase() {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         if (window.firebase && window.firebaseRefs) {
           resolve();
-        } else {
-          const checkInterval = setInterval(() => {
-            if (window.firebase && window.firebaseRefs) {
-              clearInterval(checkInterval);
-              resolve();
-            }
-          }, 100);
+          return;
         }
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 segundos máximo
+        
+        const checkInterval = setInterval(() => {
+          attempts++;
+          
+          if (window.firebase && window.firebaseRefs) {
+            clearInterval(checkInterval);
+            console.log(`✅ Firebase disponible después de ${attempts * 100}ms`);
+            resolve();
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.error('❌ Firebase no disponible después de 5 segundos');
+            reject(new Error('Firebase no se pudo inicializar en 5 segundos'));
+          }
+        }, 100);
       });
     }
 
-    // Función simplificada para cargar partidas (solo localStorage por ahora)
-    function loadMatches() {
+    // Función para cargar partidas desde Firebase
+    async function loadMatches() {
       try {
-        const raw = localStorage.getItem(MATCHES_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Loading matches from Firebase...');
+        const matchesRef = ref(database, MATCH_REF);
+        const snapshot = await get(matchesRef);
+        
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const matches = Object.values(data || {});
+          console.log('Matches loaded from Firebase:', matches);
+          return matches;
+        }
+        console.log('No matches found in Firebase, returning empty array');
         return [];
+      } catch (error) {
+        console.error('Error loading matches from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        try {
+          const raw = localStorage.getItem(MATCHES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
       }
     }
 
-    // Función simplificada para guardar partidas (solo localStorage por ahora)
-    function saveMatches(list) {
+    // Función para guardar partidas en Firebase
+    async function saveMatches(list) {
       try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Saving matches to Firebase:', list);
+        const matchesRef = ref(database, MATCH_REF);
+        await set(matchesRef, list);
+        
+        // También guardar en localStorage como backup
         localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
-        console.log('Matches saved to localStorage:', list);
+        console.log('Matches saved successfully to Firebase and localStorage');
       } catch (error) {
-        console.error('Error saving matches:', error);
+        console.error('Error saving matches to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+        console.log('Matches saved to localStorage as fallback');
       }
     }
 
@@ -520,15 +575,16 @@
     const sortBtn = document.getElementById('sort-efficiency');
     const sortIcon = document.getElementById('eff-sort-icon');
 
-    function renderClasificatoria() {
-      const matches = loadMatches();
-      const players = deriveStatsFromMatches(matches);
+    async function renderClasificatoria() {
+      try {
+        const matches = await loadMatches();
+        const players = deriveStatsFromMatches(matches);
 
-      players.sort((a, b) => {
-        const ea = compute(a).eff;
-        const eb = compute(b).eff;
-        return sortDesc ? eb - ea : ea - eb;
-      });
+        players.sort((a, b) => {
+          const ea = compute(a).eff;
+          const eb = compute(b).eff;
+          return sortDesc ? eb - ea : ea - eb;
+        });
 
       tbody.innerHTML = '';
       players.forEach((p) => {
@@ -578,14 +634,22 @@
       });
 
       sortIcon.style.transform = sortDesc ? 'rotate(0deg)' : 'rotate(180deg)';
+      } catch (error) {
+        console.error('Error rendering classification:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-3 text-center text-red-600">Error al cargar la clasificación</td></tr>';
+      }
     }
 
     sortBtn.addEventListener('click', () => {
       sortDesc = !sortDesc;
-      renderClasificatoria();
+      renderClasificatoria().catch(error => {
+        console.error('Error sorting classification:', error);
+      });
     });
 
-    renderClasificatoria();
+    renderClasificatoria().catch(error => {
+      console.error('Error initializing classification:', error);
+    });
 
     // ======================
     // Historial de partidas
@@ -621,11 +685,11 @@
     let historialSortDesc = true;
     let allMatchesData = []; // Para almacenar los datos completos incluyendo rounds
 
-    function showHistorial() {
+    async function showHistorial() {
       clasificatoriaSection.classList.add('hidden');
       detalleSection.classList.add('hidden');
       historialSection.classList.remove('hidden');
-      renderHistorial();
+      await renderHistorial();
     }
 
     function showMain() {
@@ -672,9 +736,10 @@
       return { total, lisas, promedioPuntos, promedioRondas };
     }
 
-    function renderHistorial() {
-      const allMatches = loadMatches();
-      const filteredMatches = filterMatches(allMatches);
+    async function renderHistorial() {
+      try {
+        const allMatches = await loadMatches();
+        const filteredMatches = filterMatches(allMatches);
       
       // Ordenar por fecha
       filteredMatches.sort((a, b) => {
@@ -743,11 +808,16 @@
         
         historialBody.appendChild(row);
       });
+      } catch (error) {
+        console.error('Error rendering history:', error);
+        historialBody.innerHTML = '<tr><td colspan="9" class="px-4 py-3 text-center text-red-600">Error al cargar el historial</td></tr>';
+      }
     }
 
-    function exportToCsv() {
-      const allMatches = loadMatches();
-      const filteredMatches = filterMatches(allMatches);
+    async function exportToCsv() {
+      try {
+        const allMatches = await loadMatches();
+        const filteredMatches = filterMatches(allMatches);
       
       if (filteredMatches.length === 0) {
         alert('No hay partidas para exportar con los filtros actuales.');
@@ -790,15 +860,19 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error exporting CSV:', error);
+        alert('Error al exportar CSV: ' + error.message);
+      }
     }
 
-    function clearFilters() {
+    async function clearFilters() {
       filterFechaDesde.value = '';
       filterFechaHasta.value = '';
       filterJugador.value = '';
       filterModalidad.value = '';
       filterSoloLisas.checked = false;
-      renderHistorial();
+      await renderHistorial();
     }
 
     function showMatchDetails(match) {
@@ -969,7 +1043,9 @@
     
     sortFechaBtn.addEventListener('click', () => {
       historialSortDesc = !historialSortDesc;
-      renderHistorial();
+      renderHistorial().catch(error => {
+        console.error('Error sorting history:', error);
+      });
     });
 
     // Event listeners para modal
@@ -989,8 +1065,12 @@
 
     // Filtros en tiempo real
     [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
-      filter.addEventListener('input', renderHistorial);
-      filter.addEventListener('change', renderHistorial);
+      filter.addEventListener('input', () => renderHistorial().catch(error => {
+        console.error('Error filtering history:', error);
+      }));
+      filter.addEventListener('change', () => renderHistorial().catch(error => {
+        console.error('Error filtering history:', error);
+      }));
     });
 
     // ======================
@@ -1088,47 +1168,84 @@
       recalcAndRender();
     }
 
-    // Función simplificada para cargar partida (solo localStorage por ahora)
-    function loadMatch() {
+    // Función para cargar partida desde Firebase
+    async function loadMatch() {
       try {
-        const raw = localStorage.getItem(MATCH_KEY);
-        if (!raw) return defaultMatch();
-        const parsed = JSON.parse(raw);
-        return ensureMatchStructure(parsed);
-      } catch {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Loading current match from Firebase...');
+        const matchRef = ref(database, CURRENT_MATCH_REF);
+        const snapshot = await get(matchRef);
+        
+        if (snapshot.exists()) {
+          const parsed = snapshot.val();
+          const match = ensureMatchStructure(parsed);
+          console.log('Match loaded from Firebase:', match);
+          return match;
+        }
+        console.log('No current match found in Firebase, creating default');
         return defaultMatch();
+      } catch (error) {
+        console.error('Error loading match from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        try {
+          const raw = localStorage.getItem(MATCH_KEY);
+          if (!raw) return defaultMatch();
+          const parsed = JSON.parse(raw);
+          return ensureMatchStructure(parsed);
+        } catch {
+          return defaultMatch();
+        }
       }
     }
 
-    // Función simplificada para guardar partida (solo localStorage por ahora)
-    function saveMatch(m) {
+    // Función para guardar partida en Firebase
+    async function saveMatch(m) {
       try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Saving current match to Firebase:', m);
+        const matchRef = ref(database, CURRENT_MATCH_REF);
+        await set(matchRef, m);
+        
+        // También guardar en localStorage como backup
         localStorage.setItem(MATCH_KEY, JSON.stringify(m));
-        console.log('Match saved to localStorage:', m);
+        console.log('Match saved successfully to Firebase and localStorage');
       } catch (error) {
-        console.error('Error saving match:', error);
+        console.error('Error saving match to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+        console.log('Match saved to localStorage as fallback');
       }
     }
 
     let match = null;
 
-    function initializeMatch() {
+    async function initializeMatch() {
       console.log('initializeMatch started');
-      match = loadMatch();
+      match = await loadMatch();
       console.log('Match loaded:', match);
       console.log('Match inProgress:', match.inProgress);
       
       bindHeaderInputs();
       recalcAndRender();
       
+      // Configurar sincronización en tiempo real
+      setupRealtimeSync();
       console.log('initializeMatch completed');
     }
 
-    function setupRealtimeSync() {
+        function setupRealtimeSync() {
       try {
         if (window.firebase && window.firebaseRefs) {
           const { ref, onValue } = window.firebaseRefs;
           const { database } = window.firebase;
+          
+          console.log('Setting up real-time sync...');
           
           // Sincronizar partida actual
           const matchRef = ref(database, CURRENT_MATCH_REF);
@@ -1136,6 +1253,7 @@
             if (snapshot.exists() && !autoFinalizing) {
               const updatedMatch = snapshot.val();
               if (updatedMatch && updatedMatch.id !== match?.id) {
+                console.log('Match updated from Firebase:', updatedMatch);
                 match = ensureMatchStructure(updatedMatch);
                 bindHeaderInputs();
                 recalcAndRender();
@@ -1147,12 +1265,15 @@
           const matchesRef = ref(database, MATCH_REF);
           onValue(matchesRef, (snapshot) => {
             if (snapshot.exists()) {
-              renderClasificatoria();
+              console.log('Matches updated from Firebase, refreshing classification');
+              renderClasificatoria().catch(error => {
+                console.error('Error refreshing classification from Firebase:', error);
+              });
             }
           });
           
           updateConnectionStatus(true);
-          console.log('Real-time sync enabled');
+          console.log('Real-time sync enabled successfully');
         }
       } catch (error) {
         console.error('Error setting up real-time sync:', error);
@@ -1165,10 +1286,10 @@
       if (statusEl) {
         if (connected) {
           statusEl.className = 'inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full';
-          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Firebase Conectado';
         } else {
           statusEl.className = 'inline-flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full';
-          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Desconectado';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Firebase Desconectado';
         }
       }
     }
@@ -1355,45 +1476,54 @@
       });
     }
 
-    function recordFinalizedMatch() {
-      const { totalA, totalB, winner } = computeTotals();
-      // Lisa: un equipo no obtuvo ningún punto durante toda la partida
-      const lisa = totalA === 0 || totalB === 0;
-      const matches = loadMatches();
-      matches.push({
-        id: match.id,
-        fecha: match.fecha,
-        mesa: match.mesa,
-        target: match.target,
-        teamA: { j1: match.teamA.j1, j2: match.teamA.j2 },
-        teamB: { j1: match.teamB.j1, j2: match.teamB.j2 },
-        rounds: [...match.rounds], // Incluir las rondas para el modal
-        totalA,
-        totalB,
-        winner,
-        lisa,
-        closedAt: Date.now()
-      });
-      saveMatches(matches);
-      renderClasificatoria();
+    async function recordFinalizedMatch() {
+      try {
+        const { totalA, totalB, winner } = computeTotals();
+        // Lisa: un equipo no obtuvo ningún punto durante toda la partida
+        const lisa = totalA === 0 || totalB === 0;
+        const matches = await loadMatches();
+        matches.push({
+          id: match.id,
+          fecha: match.fecha,
+          mesa: match.mesa,
+          target: match.target,
+          teamA: { j1: match.teamA.j1, j2: match.teamA.j2 },
+          teamB: { j1: match.teamB.j1, j2: match.teamB.j2 },
+          rounds: [...match.rounds], // Incluir las rondas para el modal
+          totalA,
+          totalB,
+          winner,
+          lisa,
+          closedAt: Date.now()
+        });
+        await saveMatches(matches);
+        await renderClasificatoria();
+      } catch (error) {
+        console.error('Error recording finalized match:', error);
+      }
     }
 
-    function autoFinalizeAndRestart() {
+    async function autoFinalizeAndRestart() {
       if (autoFinalizing || !match.inProgress) return;
       autoFinalizing = true;
-      // Finalize current
-      match.inProgress = false;
-      match.closedAt = Date.now();
-      saveMatch(match);
-      bindHeaderInputs();
-      recalcAndRender();
-      // Record on leaderboard/history
-      recordFinalizedMatch();
-      // Brief pause to show result, then start new match preserving settings
-      setTimeout(() => {
+      try {
+        // Finalize current
+        match.inProgress = false;
+        match.closedAt = Date.now();
+        await saveMatch(match);
+        bindHeaderInputs();
+        recalcAndRender();
+        // Record on leaderboard/history
+        await recordFinalizedMatch();
+        // Brief pause to show result, then start new match preserving settings
+        setTimeout(() => {
+          autoFinalizing = false;
+          startNewMatch(true);
+        }, 1200);
+      } catch (error) {
+        console.error('Error in autoFinalizeAndRestart:', error);
         autoFinalizing = false;
-        startNewMatch(true);
-      }, 1200);
+      }
     }
 
     function recalcAndRender() {
@@ -1481,34 +1611,31 @@
       startNewMatch(true);
     });
 
-    // Botón de debug
-    const debugBtn = document.getElementById('debug-match');
-    if (debugBtn) {
-      debugBtn.addEventListener('click', () => {
-        console.log('=== DEBUG INFO ===');
-        console.log('Match object:', match);
-        console.log('Match inProgress:', match?.inProgress);
-        console.log('Match rounds:', match?.rounds);
-        console.log('Add round button disabled:', addRoundBtn.disabled);
-        console.log('Add round button opacity:', addRoundBtn.classList.contains('opacity-60'));
-        console.log('Firebase available:', !!window.firebase);
-        console.log('localStorage match:', localStorage.getItem(MATCH_KEY));
-        console.log('localStorage matches:', localStorage.getItem(MATCHES_KEY));
-        console.log('==================');
-        
-        // Forzar nueva partida si hay problemas
-        if (!match || !match.inProgress) {
-          console.log('Forcing new match...');
-          startNewMatch();
-        }
-      });
-    }
+
 
     // Botón de reset
     const resetBtn = document.getElementById('reset-all');
     if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
+      resetBtn.addEventListener('click', async () => {
         console.log('Resetting everything...');
+        
+        try {
+          // Limpiar Firebase
+          if (window.firebase && window.firebaseRefs) {
+            const { ref, remove } = window.firebaseRefs;
+            const { database } = window.firebase;
+            
+            console.log('Clearing Firebase data...');
+            const matchRef = ref(database, CURRENT_MATCH_REF);
+            const matchesRef = ref(database, MATCH_REF);
+            
+            await remove(matchRef);
+            await remove(matchesRef);
+            console.log('Firebase data cleared');
+          }
+        } catch (error) {
+          console.error('Error clearing Firebase:', error);
+        }
         
         // Limpiar localStorage
         localStorage.removeItem(MATCH_KEY);
@@ -1523,19 +1650,20 @@
       });
     }
 
+
+
     // Inicialización
-    try {
-      initializeMatch();
+    initializeMatch().then(() => {
       if (!match.fecha) {
         match.fecha = todayYmd();
       }
-    } catch (error) {
+    }).catch(error => {
       console.error('Error initializing match:', error);
       // Fallback: crear match por defecto
       match = defaultMatch();
       bindHeaderInputs();
       recalcAndRender();
-    }
+    });
   });
   </script>
 
