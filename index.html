@@ -1207,7 +1207,7 @@
     function ensureMatchStructure(matchObj) {
       if (!matchObj) return defaultMatch();
       
-      return {
+      const result = {
         id: matchObj.id || randId(),
         inProgress: matchObj.inProgress !== false, // Por defecto true
         fecha: matchObj.fecha || todayYmd(),
@@ -1224,6 +1224,11 @@
         rounds: Array.isArray(matchObj.rounds) ? matchObj.rounds : [],
         closedAt: matchObj.closedAt || null
       };
+      
+      console.log('ensureMatchStructure - fecha original:', matchObj.fecha);
+      console.log('ensureMatchStructure - fecha resultante:', result.fecha);
+      
+      return result;
     }
 
     function startNewMatch(preserve = true) {
@@ -1255,6 +1260,7 @@
           const parsed = snapshot.val();
           const match = ensureMatchStructure(parsed);
           console.log('Match loaded from Firebase:', match);
+          console.log('Fecha cargada desde Firebase:', match.fecha);
           return match;
         }
         console.log('No current match found in Firebase, creating default');
@@ -1281,6 +1287,7 @@
         const { database } = window.firebase;
         
         console.log('Saving current match to Firebase:', m);
+        console.log('Fecha que se está guardando:', m.fecha);
         const matchRef = ref(database, CURRENT_MATCH_REF);
         await set(matchRef, m);
         
@@ -1374,7 +1381,10 @@
         return;
       }
       
+      console.log('Setting fecha input to:', match.fecha);
       fechaInput.value = match.fecha || '';
+      console.log('Fecha input value after setting:', fechaInput.value);
+      
       mesaInput.value = match.mesa || '';
       targetSelect.value = String(match.target || 100);
       targetDisplay.textContent = String(match.target || 100);
@@ -1639,7 +1649,12 @@
 
     // Binders
     targetSelect.addEventListener('change', () => { match.target = parseInt(targetSelect.value, 10); targetDisplay.textContent = targetSelect.value; saveMatch(match); recalcAndRender(); });
-    fechaInput.addEventListener('change', () => { match.fecha = fechaInput.value; saveMatch(match); });
+    fechaInput.addEventListener('change', () => { 
+      console.log('Fecha seleccionada:', fechaInput.value);
+      match.fecha = fechaInput.value;
+      console.log('Fecha guardada en match:', match.fecha);
+      saveMatch(match); 
+    });
     mesaInput.addEventListener('input', () => { match.mesa = mesaInput.value; saveMatch(match); });
     a1.addEventListener('input', () => { match.teamA.j1 = a1.value; saveMatch(match); });
     a2.addEventListener('input', () => { match.teamA.j2 = a2.value; saveMatch(match); });
