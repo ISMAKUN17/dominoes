@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Liga Dominó y Romo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import { getDatabase, ref, set, get, push, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyALR-b68phh_u92V3rw9B9Ei7FcexU2xc8",
+        authDomain: "proyectos17-98695.firebaseapp.com",
+        databaseURL: "https://proyectos17-98695-default-rtdb.firebaseio.com",
+        projectId: "proyectos17-98695",
+        storageBucket: "proyectos17-98695.firebasestorage.app",
+        messagingSenderId: "951673973410",
+        appId: "1:951673973410:web:25eb8fbc37a18cf28645fb",
+        measurementId: "G-XMNRJBKCZD"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      const analytics = getAnalytics(app);
+
+      window.firebase = { app, database, analytics };
+      window.firebaseRefs = { ref, set, get, push, onValue, off, remove };
+    </script>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 text-slate-800 font-sans">
+
+  <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+        <span class="bg-gradient-to-r from-red-600 to-purple-600 bg-clip-text text-transparent">🔐 Admin - Liga Dominó y Romo</span>
+      </h1>
+      <div class="flex items-center gap-4">
+        <a href="domino.html" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
+          🎲 Volver al Dashboard
+        </a>
+        <span id="connection-status" class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8" role="main">
+
+    <!-- Estadísticas generales -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6">
+      <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-4">📊 Estadísticas Generales</h2>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="bg-blue-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-blue-600" id="stats-total">0</div>
+          <div class="text-sm text-blue-600">Total partidas</div>
+        </div>
+        <div class="bg-green-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-green-600" id="stats-lisas">0</div>
+          <div class="text-sm text-green-600">Lisas</div>
+        </div>
+        <div class="bg-purple-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-purple-600" id="stats-promedio">0</div>
+          <div class="text-sm text-purple-600">Puntos promedio</div>
+        </div>
+        <div class="bg-orange-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-orange-600" id="stats-duracion">0</div>
+          <div class="text-sm text-orange-600">Rondas promedio</div>
+        </div>
+        <div class="bg-red-50 p-4 rounded-xl text-center">
+          <div class="text-2xl font-bold text-red-600" id="stats-jugadores">0</div>
+          <div class="text-sm text-red-600">Jugadores únicos</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gestión de partidas -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl md:text-2xl font-bold text-slate-800">🎲 Gestión de Partidas</h2>
+        <div class="flex items-center gap-3">
+          <button id="add-match-btn" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-green-700">
+            ➕ Nueva Partida
+          </button>
+          <button id="export-all-btn" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
+            📥 Exportar Todo
+          </button>
+          <button id="refresh-btn" class="inline-flex items-center gap-2 bg-slate-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-700">
+            🔄 Refrescar
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros avanzados -->
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
+          <input type="date" id="filter-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
+          <input type="date" id="filter-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Jugador</label>
+          <input type="text" id="filter-jugador" placeholder="Buscar jugador..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
+          <select id="filter-modalidad" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todas</option>
+            <option value="100">100</option>
+            <option value="150">150</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+        <div>
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" id="filter-solo-lisas" class="rounded border-slate-300 focus:ring-blue-500">
+            Solo lisas
+          </label>
+        </div>
+        <div>
+          <button id="clear-filters" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de partidas -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-slate-100" id="sort-fecha">
+                Fecha
+                <svg class="w-4 h-4 inline ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </th>
+              <th class="px-4 py-3 text-left font-semibold">Mesa</th>
+              <th class="px-4 py-3 text-left font-semibold">Modalidad</th>
+              <th class="px-4 py-3 text-left font-semibold">Equipo A</th>
+              <th class="px-4 py-3 text-left font-semibold">Puntos A</th>
+              <th class="px-4 py-3 text-left font-semibold">Equipo B</th>
+              <th class="px-4 py-3 text-left font-semibold">Puntos B</th>
+              <th class="px-4 py-3 text-left font-semibold">Ganador</th>
+              <th class="px-4 py-3 text-left font-semibold">Lisa</th>
+              <th class="px-4 py-3 text-left font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="matches-body" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+
+      <div id="no-results" class="text-center py-8 text-slate-500 hidden">
+        No se encontraron partidas con los filtros aplicados.
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal para editar/crear partida -->
+  <div id="match-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+        <h3 id="modal-title" class="text-xl font-bold text-slate-800">Editar Partida</h3>
+        <button id="close-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+      </div>
+      
+      <form id="match-form" class="p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label for="modal-fecha" class="block text-sm font-semibold text-slate-700 mb-1">Fecha</label>
+            <input type="date" id="modal-fecha" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label for="modal-mesa" class="block text-sm font-semibold text-slate-700 mb-1">Mesa</label>
+            <input type="number" id="modal-mesa" min="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label for="modal-target" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
+            <select id="modal-target" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="100">100</option>
+              <option value="150">150</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="border border-slate-200 rounded-xl p-4">
+            <h4 class="text-lg font-bold text-slate-800 mb-3">Equipo A</h4>
+            <div class="space-y-3">
+              <div>
+                <label for="modal-teamA-j1" class="block text-sm text-slate-600">Jugador 1</label>
+                <input type="text" id="modal-teamA-j1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="modal-teamA-j2" class="block text-sm text-slate-600">Jugador 2</label>
+                <input type="text" id="modal-teamA-j2" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+          </div>
+          
+          <div class="border border-slate-200 rounded-xl p-4">
+            <h4 class="text-lg font-bold text-slate-800 mb-3">Equipo B</h4>
+            <div class="space-y-3">
+              <div>
+                <label for="modal-teamB-j1" class="block text-sm text-slate-600">Jugador 1</label>
+                <input type="text" id="modal-teamB-j1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="modal-teamB-j2" class="block text-sm text-slate-600">Jugador 2</label>
+                <input type="text" id="modal-teamB-j2" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-lg font-bold text-slate-800 mb-3">Rondas</h4>
+          <div id="modal-rounds" class="space-y-3">
+            <!-- Las rondas se generarán dinámicamente -->
+          </div>
+          <button type="button" id="add-round-btn" class="mt-3 inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-200">
+            ➕ Agregar Ronda
+          </button>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" id="cancel-btn" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">
+            Cancelar
+          </button>
+          <button type="submit" id="save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación para eliminar -->
+  <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-slate-900 mb-2">¿Eliminar partida?</h3>
+        <p class="text-sm text-slate-500 mb-6">Esta acción no se puede deshacer. Se eliminará permanentemente la partida y se actualizará la clasificación.</p>
+        <div class="flex items-center justify-center gap-3">
+          <button id="cancel-delete" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">
+            Cancelar
+          </button>
+          <button id="confirm-delete" class="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Configuración
+      const MATCHES_KEY = 'domino_matches_v1';
+      const MATCH_REF = 'domino_matches';
+      const CURRENT_MATCH_REF = 'current_match';
+
+      // Elementos DOM
+      const matchesBody = document.getElementById('matches-body');
+      const noResults = document.getElementById('no-results');
+      const matchModal = document.getElementById('match-modal');
+      const deleteModal = document.getElementById('delete-modal');
+      const matchForm = document.getElementById('match-form');
+      const modalTitle = document.getElementById('modal-title');
+      const closeModal = document.getElementById('close-modal');
+      const cancelBtn = document.getElementById('cancel-btn');
+      const saveBtn = document.getElementById('save-btn');
+      const addRoundBtn = document.getElementById('add-round-btn');
+      const addMatchBtn = document.getElementById('add-match-btn');
+      const exportAllBtn = document.getElementById('export-all-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const clearFiltersBtn = document.getElementById('clear-filters');
+
+      // Filtros
+      const filterFechaDesde = document.getElementById('filter-fecha-desde');
+      const filterFechaHasta = document.getElementById('filter-fecha-hasta');
+      const filterJugador = document.getElementById('filter-jugador');
+      const filterModalidad = document.getElementById('filter-modalidad');
+      const filterSoloLisas = document.getElementById('filter-solo-lisas');
+
+      // Estadísticas
+      const statsTotal = document.getElementById('stats-total');
+      const statsLisas = document.getElementById('stats-lisas');
+      const statsPromedio = document.getElementById('stats-promedio');
+      const statsDuracion = document.getElementById('stats-duracion');
+      const statsJugadores = document.getElementById('stats-jugadores');
+
+      // Variables globales
+      let allMatches = [];
+      let currentEditingMatch = null;
+      let historialSortDesc = true;
+
+      // Funciones de Firebase
+      async function waitForFirebase() {
+        return new Promise((resolve) => {
+          if (window.firebase && window.firebaseRefs) {
+            resolve();
+          } else {
+            const checkInterval = setInterval(() => {
+              if (window.firebase && window.firebaseRefs) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          }
+        });
+      }
+
+      async function loadMatches() {
+        try {
+          await waitForFirebase();
+          const { ref, get } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const matchesRef = ref(database, MATCH_REF);
+          const snapshot = await get(matchesRef);
+          
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const matches = Object.values(data || {});
+            return matches;
+          }
+          return [];
+        } catch (error) {
+          console.error('Error loading matches:', error);
+          try {
+            const raw = localStorage.getItem(MATCHES_KEY);
+            return raw ? JSON.parse(raw) : [];
+          } catch {
+            return [];
+          }
+        }
+      }
+
+      async function saveMatches(matches) {
+        try {
+          await waitForFirebase();
+          const { ref, set } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const matchesRef = ref(database, MATCH_REF);
+          await set(matchesRef, matches);
+          
+          localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+        } catch (error) {
+          console.error('Error saving matches:', error);
+          localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+        }
+      }
+
+      async function deleteMatch(matchId) {
+        try {
+          const updatedMatches = allMatches.filter(m => m.id !== matchId);
+          await saveMatches(updatedMatches);
+          allMatches = updatedMatches;
+          renderMatches();
+          updateStats();
+        } catch (error) {
+          console.error('Error deleting match:', error);
+          alert('Error al eliminar la partida: ' + error.message);
+        }
+      }
+
+      // Funciones de renderizado
+      function filterMatches(matches) {
+        return matches.filter(match => {
+          if (filterFechaDesde.value && match.fecha < filterFechaDesde.value) return false;
+          if (filterFechaHasta.value && match.fecha > filterFechaHasta.value) return false;
+          
+          if (filterJugador.value) {
+            const searchTerm = filterJugador.value.toLowerCase();
+            const allPlayers = [
+              match.teamA?.j1, match.teamA?.j2,
+              match.teamB?.j1, match.teamB?.j2
+            ].filter(p => p).map(p => p.toLowerCase());
+            if (!allPlayers.some(p => p.includes(searchTerm))) return false;
+          }
+          
+          if (filterModalidad.value && String(match.target) !== filterModalidad.value) return false;
+          if (filterSoloLisas.checked && !match.lisa) return false;
+          
+          return true;
+        });
+      }
+
+      function calculateStats(matches) {
+        const total = matches.length;
+        const lisas = matches.filter(m => m.lisa).length;
+        const totalPuntos = matches.reduce((sum, m) => sum + (m.totalA || 0) + (m.totalB || 0), 0);
+        const promedioPuntos = total > 0 ? Math.round(totalPuntos / (total * 2)) : 0;
+        const promedioRondas = total > 0 ? Math.round(promedioPuntos / 15) : 0;
+        
+        // Jugadores únicos
+        const uniquePlayers = new Set();
+        matches.forEach(match => {
+          [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
+            .filter(p => p)
+            .forEach(p => uniquePlayers.add(p.trim()));
+        });
+        
+        return { total, lisas, promedioPuntos, promedioRondas, jugadoresUnicos: uniquePlayers.size };
+      }
+
+      function updateStats() {
+        const stats = calculateStats(allMatches);
+        statsTotal.textContent = stats.total;
+        statsLisas.textContent = stats.lisas;
+        statsPromedio.textContent = stats.promedioPuntos;
+        statsDuracion.textContent = stats.promedioRondas;
+        statsJugadores.textContent = stats.jugadoresUnicos;
+      }
+
+      function renderMatches() {
+        const filteredMatches = filterMatches(allMatches);
+        
+        filteredMatches.sort((a, b) => {
+          const dateA = new Date(a.fecha || a.closedAt);
+          const dateB = new Date(b.fecha || b.closedAt);
+          return historialSortDesc ? dateB - dateA : dateA - dateB;
+        });
+
+        matchesBody.innerHTML = '';
+        
+        if (filteredMatches.length === 0) {
+          noResults.classList.remove('hidden');
+          return;
+        }
+        
+        noResults.classList.add('hidden');
+        
+        filteredMatches.forEach(match => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-50';
+
+          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+          
+          let ganador = '-';
+          if (match.winner === 'A') ganador = 'Equipo A';
+          else if (match.winner === 'B') ganador = 'Equipo B';
+
+          row.innerHTML = `
+            <td class="px-4 py-3">${fecha}</td>
+            <td class="px-4 py-3">${match.mesa || '-'}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                ${match.target}
+              </span>
+            </td>
+            <td class="px-4 py-3 max-w-32 truncate" title="${equipoA}">${equipoA}</td>
+            <td class="px-4 py-3 font-semibold ${match.winner === 'A' ? 'text-green-600' : ''}">${match.totalA || 0}</td>
+            <td class="px-4 py-3 max-w-32 truncate" title="${equipoB}">${equipoB}</td>
+            <td class="px-4 py-3 font-semibold ${match.winner === 'B' ? 'text-green-600' : ''}">${match.totalB || 0}</td>
+            <td class="px-4 py-3">
+              ${match.winner ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">${ganador}</span>` : '-'}
+            </td>
+            <td class="px-4 py-3">
+              ${match.lisa ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sí</span>' : '<span class="text-slate-400">No</span>'}
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <button onclick="editMatch('${match.id}')" class="text-blue-600 hover:text-blue-800 p-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button onclick="deleteMatchConfirm('${match.id}')" class="text-red-600 hover:text-red-800 p-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          `;
+          
+          matchesBody.appendChild(row);
+        });
+      }
+
+      // Funciones del modal
+      function showModal(title, match = null) {
+        currentEditingMatch = match;
+        modalTitle.textContent = title;
+        
+        if (match) {
+          // Editar partida existente
+          document.getElementById('modal-fecha').value = match.fecha || '';
+          document.getElementById('modal-mesa').value = match.mesa || '';
+          document.getElementById('modal-target').value = match.target || 100;
+          document.getElementById('modal-teamA-j1').value = match.teamA?.j1 || '';
+          document.getElementById('modal-teamA-j2').value = match.teamA?.j2 || '';
+          document.getElementById('modal-teamB-j1').value = match.teamB?.j1 || '';
+          document.getElementById('modal-teamB-j2').value = match.teamB?.j2 || '';
+          
+          renderModalRounds(match.rounds || []);
+        } else {
+          // Nueva partida
+          document.getElementById('modal-fecha').value = new Date().toISOString().split('T')[0];
+          document.getElementById('modal-mesa').value = '';
+          document.getElementById('modal-target').value = 100;
+          document.getElementById('modal-teamA-j1').value = '';
+          document.getElementById('modal-teamA-j2').value = '';
+          document.getElementById('modal-teamB-j1').value = '';
+          document.getElementById('modal-teamB-j2').value = '';
+          
+          renderModalRounds([]);
+        }
+        
+        matchModal.classList.remove('hidden');
+      }
+
+      function hideModal() {
+        matchModal.classList.add('hidden');
+        currentEditingMatch = null;
+        matchForm.reset();
+      }
+
+      function renderModalRounds(rounds) {
+        const roundsContainer = document.getElementById('modal-rounds');
+        roundsContainer.innerHTML = '';
+        
+        rounds.forEach((round, index) => {
+          const roundDiv = document.createElement('div');
+          roundDiv.className = 'grid grid-cols-3 gap-3 items-center';
+          roundDiv.innerHTML = `
+            <div class="text-sm font-semibold text-slate-700">Ronda ${index + 1}</div>
+            <input type="number" min="0" value="${round.a || 0}" class="round-a rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos A">
+            <input type="number" min="0" value="${round.b || 0}" class="round-b rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos B">
+          `;
+          roundsContainer.appendChild(roundDiv);
+        });
+      }
+
+      function getModalRounds() {
+        const rounds = [];
+        const roundDivs = document.querySelectorAll('#modal-rounds > div');
+        
+        roundDivs.forEach(div => {
+          const a = parseInt(div.querySelector('.round-a').value) || 0;
+          const b = parseInt(div.querySelector('.round-b').value) || 0;
+          rounds.push({ a, b });
+        });
+        
+        return rounds;
+      }
+
+      function calculateMatchTotals(rounds, target) {
+        let totalA = 0, totalB = 0, winner = null;
+        
+        for (const round of rounds) {
+          totalA += round.a || 0;
+          totalB += round.b || 0;
+          
+          if (totalA >= target) {
+            winner = 'A';
+            break;
+          } else if (totalB >= target) {
+            winner = 'B';
+            break;
+          }
+        }
+        
+        const lisa = totalA === 0 || totalB === 0;
+        
+        return { totalA, totalB, winner, lisa };
+      }
+
+      // Event listeners
+      addMatchBtn.addEventListener('click', () => {
+        showModal('Nueva Partida');
+      });
+
+      closeModal.addEventListener('click', hideModal);
+      cancelBtn.addEventListener('click', hideModal);
+
+      addRoundBtn.addEventListener('click', () => {
+        const roundsContainer = document.getElementById('modal-rounds');
+        const roundCount = roundsContainer.children.length;
+        const roundDiv = document.createElement('div');
+        roundDiv.className = 'grid grid-cols-3 gap-3 items-center';
+        roundDiv.innerHTML = `
+          <div class="text-sm font-semibold text-slate-700">Ronda ${roundCount + 1}</div>
+          <input type="number" min="0" class="round-a rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos A">
+          <input type="number" min="0" class="round-b rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos B">
+        `;
+        roundsContainer.appendChild(roundDiv);
+      });
+
+      matchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        try {
+          const formData = {
+            fecha: document.getElementById('modal-fecha').value,
+            mesa: document.getElementById('modal-mesa').value,
+            target: parseInt(document.getElementById('modal-target').value),
+            teamA: {
+              j1: document.getElementById('modal-teamA-j1').value,
+              j2: document.getElementById('modal-teamA-j2').value
+            },
+            teamB: {
+              j1: document.getElementById('modal-teamB-j1').value,
+              j2: document.getElementById('modal-teamB-j2').value
+            },
+            rounds: getModalRounds()
+          };
+          
+          const { totalA, totalB, winner, lisa } = calculateMatchTotals(formData.rounds, formData.target);
+          
+          const matchData = {
+            ...formData,
+            totalA,
+            totalB,
+            winner,
+            lisa,
+            closedAt: Date.now()
+          };
+          
+          if (currentEditingMatch) {
+            // Editar partida existente
+            matchData.id = currentEditingMatch.id;
+            const index = allMatches.findIndex(m => m.id === currentEditingMatch.id);
+            allMatches[index] = matchData;
+          } else {
+            // Nueva partida
+            matchData.id = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            allMatches.push(matchData);
+          }
+          
+          await saveMatches(allMatches);
+          hideModal();
+          renderMatches();
+          updateStats();
+          
+          alert(currentEditingMatch ? 'Partida actualizada correctamente' : 'Nueva partida creada correctamente');
+        } catch (error) {
+          console.error('Error saving match:', error);
+          alert('Error al guardar la partida: ' + error.message);
+        }
+      });
+
+      // Funciones globales para los botones de acción
+      window.editMatch = function(matchId) {
+        const match = allMatches.find(m => m.id === matchId);
+        if (match) {
+          showModal('Editar Partida', match);
+        }
+      };
+
+      window.deleteMatchConfirm = function(matchId) {
+        const match = allMatches.find(m => m.id === matchId);
+        if (match) {
+          document.getElementById('confirm-delete').onclick = () => deleteMatch(matchId);
+          deleteModal.classList.remove('hidden');
+        }
+      };
+
+      // Botones del modal de eliminación
+      document.getElementById('cancel-delete').addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+      });
+
+      // Filtros
+      [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
+        filter.addEventListener('input', renderMatches);
+        filter.addEventListener('change', renderMatches);
+      });
+
+      clearFiltersBtn.addEventListener('click', () => {
+        filterFechaDesde.value = '';
+        filterFechaHasta.value = '';
+        filterJugador.value = '';
+        filterModalidad.value = '';
+        filterSoloLisas.checked = false;
+        renderMatches();
+      });
+
+      // Exportar todo
+      exportAllBtn.addEventListener('click', () => {
+        const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa', 'Rondas'];
+        const rows = allMatches.map(match => {
+          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+          
+          let ganador = '-';
+          if (match.winner === 'A') ganador = 'Equipo A';
+          else if (match.winner === 'B') ganador = 'Equipo B';
+
+          const rondas = (match.rounds || []).map(r => `${r.a}-${r.b}`).join('; ');
+
+          return [
+            fecha,
+            match.mesa || '-',
+            match.target,
+            equipoA,
+            match.totalA || 0,
+            equipoB,
+            match.totalB || 0,
+            ganador,
+            match.lisa ? 'Sí' : 'No',
+            rondas
+          ];
+        });
+
+        const csvContent = [headers, ...rows]
+          .map(row => row.map(cell => `"${cell}"`).join(','))
+          .join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `admin_domino_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+
+      // Refrescar
+      refreshBtn.addEventListener('click', async () => {
+        try {
+          allMatches = await loadMatches();
+          renderMatches();
+          updateStats();
+          alert('Datos refrescados correctamente');
+        } catch (error) {
+          console.error('Error refreshing:', error);
+          alert('Error al refrescar: ' + error.message);
+        }
+      });
+
+      // Cerrar modales con Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (!matchModal.classList.contains('hidden')) hideModal();
+          if (!deleteModal.classList.contains('hidden')) deleteModal.classList.add('hidden');
+        }
+      });
+
+      // Cerrar modales haciendo clic fuera
+      matchModal.addEventListener('click', (e) => {
+        if (e.target === matchModal) hideModal();
+      });
+
+      deleteModal.addEventListener('click', (e) => {
+        if (e.target === deleteModal) deleteModal.classList.add('hidden');
+      });
+
+      // Inicialización
+      async function initialize() {
+        try {
+          allMatches = await loadMatches();
+          renderMatches();
+          updateStats();
+        } catch (error) {
+          console.error('Error initializing admin:', error);
+        }
+      }
+
+      initialize();
+    });
+  </script>
+
+</body>
+</html>
