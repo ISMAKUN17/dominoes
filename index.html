@@ -1182,6 +1182,7 @@
 
     function todayYmd() {
       const d = new Date();
+      // Usar toLocaleDateString para evitar problemas de zona horaria
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -1690,6 +1691,14 @@
 
 
 
+    // Función para formatear fechas correctamente (evita problemas de zona horaria)
+    function formatDateForInput(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     // Funciones para filtros de clasificación
     function updateClasificacionPeriodoInfo() {
       const fechaDesde = document.getElementById('clasif-fecha-desde')?.value;
@@ -1738,8 +1747,9 @@
         const desde = new Date();
         desde.setDate(desde.getDate() - parseInt(days));
         
-        fechaDesde.value = desde.toISOString().split('T')[0];
-        fechaHasta.value = hasta.toISOString().split('T')[0];
+        // Usar funciones locales para evitar problemas de zona horaria
+        fechaDesde.value = formatDateForInput(desde);
+        fechaHasta.value = formatDateForInput(hasta);
       }
       
       updateClasificacionPeriodoInfo();
@@ -1799,6 +1809,12 @@
       if (!match.fecha) {
         match.fecha = todayYmd();
       }
+      
+      // Debug: verificar fecha
+      console.log('Fecha actual (local):', new Date().toLocaleDateString('es-ES'));
+      console.log('Fecha actual (ISO):', new Date().toISOString().split('T')[0]);
+      console.log('Fecha generada por todayYmd():', todayYmd());
+      console.log('Fecha del match:', match.fecha);
       
       // Inicializar información del período de clasificación
       updateClasificacionPeriodoInfo();
