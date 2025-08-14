@@ -393,8 +393,36 @@
       // Funciones de renderizado
       function filterMatches(matches) {
         return matches.filter(match => {
-          if (filterFechaDesde.value && match.fecha < filterFechaDesde.value) return false;
-          if (filterFechaHasta.value && match.fecha > filterFechaHasta.value) return false;
+          // Filtro por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
+          if (filterFechaDesde.value) {
+            let matchDate;
+            if (match.fecha) {
+              // Si hay fecha específica, usarla directamente
+              matchDate = match.fecha;
+            } else if (match.closedAt) {
+              // Si solo hay timestamp, convertirlo a fecha local
+              matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+            } else {
+              return false; // Sin fecha, no incluir
+            }
+            
+            if (matchDate < filterFechaDesde.value) return false;
+          }
+          
+          if (filterFechaHasta.value) {
+            let matchDate;
+            if (match.fecha) {
+              // Si hay fecha específica, usarla directamente
+              matchDate = match.fecha;
+            } else if (match.closedAt) {
+              // Si solo hay timestamp, convertirlo a fecha local
+              matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+            } else {
+              return false; // Sin fecha, no incluir
+            }
+            
+            if (matchDate > filterFechaHasta.value) return false;
+          }
           
           if (filterJugador.value) {
             const searchTerm = filterJugador.value.toLowerCase();
@@ -443,8 +471,25 @@
         const filteredMatches = filterMatches(allMatches);
         
         filteredMatches.sort((a, b) => {
-          const dateA = new Date(a.fecha || a.closedAt);
-          const dateB = new Date(b.fecha || b.closedAt);
+          // Ordenar por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
+          let dateA, dateB;
+          
+          if (a.fecha) {
+            dateA = new Date(a.fecha + 'T00:00:00');
+          } else if (a.closedAt) {
+            dateA = new Date(a.closedAt);
+          } else {
+            dateA = new Date(0); // Fecha mínima si no hay fecha
+          }
+          
+          if (b.fecha) {
+            dateB = new Date(b.fecha + 'T00:00:00');
+          } else if (b.closedAt) {
+            dateB = new Date(b.closedAt);
+          } else {
+            dateB = new Date(0); // Fecha mínima si no hay fecha
+          }
+          
           return historialSortDesc ? dateB - dateA : dateA - dateB;
         });
 
@@ -461,7 +506,18 @@
           const row = document.createElement('tr');
           row.className = 'hover:bg-slate-50';
 
-          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          // Manejar fechas correctamente para evitar problemas de zona horaria
+          let fecha;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
+          } else {
+            fecha = 'Sin fecha';
+          }
+          
           const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
           const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
           
@@ -524,8 +580,12 @@
           
           renderModalRounds(match.rounds || []);
         } else {
-          // Nueva partida
-          document.getElementById('modal-fecha').value = new Date().toISOString().split('T')[0];
+          // Nueva partida - Usar fecha local correcta
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          document.getElementById('modal-fecha').value = `${year}-${month}-${day}`;
           document.getElementById('modal-mesa').value = '';
           document.getElementById('modal-target').value = 100;
           document.getElementById('modal-teamA-j1').value = '';
@@ -709,7 +769,18 @@
       exportAllBtn.addEventListener('click', () => {
         const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa', 'Rondas'];
         const rows = allMatches.map(match => {
-          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          // Manejar fechas correctamente para evitar problemas de zona horaria
+          let fecha;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
+          } else {
+            fecha = 'Sin fecha';
+          }
+          
           const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
           const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
           
