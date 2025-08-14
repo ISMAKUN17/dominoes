@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -469,7 +469,7 @@
   </main>
 
   <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
-    <p>© 2025 Liga Dominó y Romo - Ismael Butler</p>
+    <p>© 2025 Liga Dominó y Romo - By Ismael Butler</p>
   </footer>
 
   <script>
@@ -763,9 +763,36 @@
 
     function filterMatches(matches) {
       return matches.filter(match => {
-        // Filtro por fecha
-        if (filterFechaDesde.value && match.fecha < filterFechaDesde.value) return false;
-        if (filterFechaHasta.value && match.fecha > filterFechaHasta.value) return false;
+        // Filtro por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
+        if (filterFechaDesde.value) {
+          let matchDate;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            matchDate = match.fecha;
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+          } else {
+            return false; // Sin fecha, no incluir
+          }
+          
+          if (matchDate < filterFechaDesde.value) return false;
+        }
+        
+        if (filterFechaHasta.value) {
+          let matchDate;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            matchDate = match.fecha;
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+          } else {
+            return false; // Sin fecha, no incluir
+          }
+          
+          if (matchDate > filterFechaHasta.value) return false;
+        }
 
         // Filtro por jugador
         if (filterJugador.value) {
@@ -838,7 +865,17 @@
           const row = document.createElement('tr');
           row.className = 'hover:bg-slate-50';
 
-          const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+          // Manejar fechas correctamente para evitar problemas de zona horaria
+          let fecha;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
+          } else {
+            fecha = 'Sin fecha';
+          }
           const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
           const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
           
@@ -897,7 +934,18 @@
 
       const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa'];
       const rows = filteredMatches.map(match => {
-        const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES');
+        // Manejar fechas correctamente para evitar problemas de zona horaria
+        let fecha;
+        if (match.fecha) {
+          // Si hay fecha específica, usarla directamente
+          fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+        } else if (match.closedAt) {
+          // Si solo hay timestamp, convertirlo a fecha local
+          fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
+        } else {
+          fecha = 'Sin fecha';
+        }
+        
         const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
         const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
         
@@ -955,13 +1003,27 @@
         return;
       }
       
-      // Información general
-      const fecha = new Date(match.fecha || match.closedAt).toLocaleDateString('es-ES', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      // Información general - Manejar fechas correctamente para evitar problemas de zona horaria
+      let fecha;
+      if (match.fecha) {
+        // Si hay fecha específica, usarla directamente
+        fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } else if (match.closedAt) {
+        // Si solo hay timestamp, convertirlo a fecha local
+        fecha = new Date(match.closedAt).toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } else {
+        fecha = 'Sin fecha';
+      }
       
       const modalFecha = document.getElementById('modal-fecha');
       const modalMesa = document.getElementById('modal-mesa');
@@ -1576,7 +1638,7 @@
           totalB,
           winner,
           lisa,
-          closedAt: Date.now()
+          closedAt: new Date().getTime() // Usar timestamp local en lugar de Date.now()
         });
         await saveMatches(matches);
         await renderClasificatoria();
@@ -1591,7 +1653,7 @@
       try {
         // Finalize current
         match.inProgress = false;
-        match.closedAt = Date.now();
+        match.closedAt = new Date().getTime(); // Usar timestamp local
         await saveMatch(match);
         bindHeaderInputs();
         recalcAndRender();
