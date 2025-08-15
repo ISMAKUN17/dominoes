@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -480,7 +480,9 @@
     const MATCHES_KEY = 'domino_matches_v1';
     const MATCH_REF = 'domino_matches';
     const CURRENT_MATCH_REF = 'current_match';
-
+    const ACTIVE_MATCHES_REF = 'active_matches'; // Nuevo: partidas activas por mesa
+    const DEVICE_ID_KEY = 'domino_device_id'; // Nuevo: ID único del dispositivo
+    
     // Función para esperar a que Firebase esté disponible
     function waitForFirebase() {
       return new Promise((resolve, reject) => {
@@ -838,7 +840,7 @@
         // Ordenar por fecha
         filteredMatches.sort((a, b) => {
           const dateA = new Date(a.fecha || a.closedAt);
-          const dateB = new Date(b.fecha || b.closedAt);
+          const dateB = new Date(b.fecha || a.closedAt);
           return historialSortDesc ? dateB - dateA : dateA - dateB;
         });
 
@@ -1236,6 +1238,24 @@
     const b2 = document.getElementById('equipoB-jugador2');
 
     let autoFinalizing = false;
+    let deviceId = null; // ID único del dispositivo
+    let currentMatchId = null; // ID de la partida actual del dispositivo
+
+    // Función para generar o obtener ID único del dispositivo
+    function getDeviceId() {
+      if (deviceId) return deviceId;
+      
+      // Intentar obtener del localStorage
+      deviceId = localStorage.getItem(DEVICE_ID_KEY);
+      
+      if (!deviceId) {
+        // Generar nuevo ID único
+        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+      }
+      
+      return deviceId;
+    }
 
     function randId() {
       const rand = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 1e9);
@@ -1244,7 +1264,6 @@
 
     function todayYmd() {
       const d = new Date();
-      // Usar toLocaleDateString para evitar problemas de zona horaria
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -1254,14 +1273,16 @@
     function defaultMatch() {
       return {
         id: randId(),
+        deviceId: getDeviceId(),
         inProgress: true,
         fecha: todayYmd(),
         mesa: '',
         target: 100,
         teamA: { j1: '', j2: '' },
         teamB: { j1: '', j2: '' },
-        rounds: [], // { a:number, b:number }
-        closedAt: null
+        rounds: [],
+        closedAt: null,
+        createdAt: new Date().getTime()
       };
     }
 
@@ -1271,7 +1292,8 @@
       
       const result = {
         id: matchObj.id || randId(),
-        inProgress: matchObj.inProgress !== false, // Por defecto true
+        deviceId: matchObj.deviceId || getDeviceId(),
+        inProgress: matchObj.inProgress !== false,
         fecha: matchObj.fecha || todayYmd(),
         mesa: matchObj.mesa || '',
         target: matchObj.target || 100,
@@ -1284,13 +1306,101 @@
           j2: matchObj.teamB?.j2 || '' 
         },
         rounds: Array.isArray(matchObj.rounds) ? matchObj.rounds : [],
-        closedAt: matchObj.closedAt || null
+        closedAt: matchObj.closedAt || null,
+        createdAt: matchObj.createdAt || new Date().getTime()
       };
       
-      console.log('ensureMatchStructure - fecha original:', matchObj.fecha);
-      console.log('ensureMatchStructure - fecha resultante:', result.fecha);
-      
       return result;
+    }
+
+    // Nueva función: verificar si una mesa está disponible
+    async function isTableAvailable(mesaNumber) {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+        
+        if (snapshot.exists()) {
+          const activeMatches = snapshot.val();
+          // Verificar si hay alguna partida activa en esa mesa
+          for (const matchId in activeMatches) {
+            const match = activeMatches[matchId];
+            if (match.mesa === mesaNumber && match.inProgress) {
+              return false; // Mesa ocupada
+            }
+          }
+        }
+        
+        return true; // Mesa disponible
+      } catch (error) {
+        console.error('Error checking table availability:', error);
+        return true; // En caso de error, asumir disponible
+      }
+    }
+
+    // Nueva función: obtener partida activa del dispositivo para una mesa específica
+    async function getActiveMatchForTable(mesaNumber) {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+        
+        if (snapshot.exists()) {
+          const activeMatches = snapshot.val();
+          // Buscar partida activa del dispositivo en esa mesa
+          for (const matchId in activeMatches) {
+            const match = activeMatches[matchId];
+            if (match.mesa === mesaNumber && 
+                match.deviceId === getDeviceId() && 
+                match.inProgress) {
+              return match;
+            }
+          }
+        }
+        
+        return null; // No hay partida activa del dispositivo en esa mesa
+      } catch (error) {
+        console.error('Error getting active match for table:', error);
+        return null;
+      }
+    }
+
+    // Nueva función: registrar partida como activa
+    async function registerActiveMatch(match) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${match.id}`);
+        await set(activeMatchesRef, match);
+        
+        console.log('Match registered as active:', match.id);
+      } catch (error) {
+        console.error('Error registering active match:', error);
+      }
+    }
+
+    // Nueva función: desregistrar partida activa
+    async function unregisterActiveMatch(matchId) {
+      try {
+        await waitForFirebase();
+        const { ref, remove } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${matchId}`);
+        await remove(activeMatchesRef);
+        
+        console.log('Match unregistered as active:', matchId);
+      } catch (error) {
+        console.error('Error unregistering active match:', error);
+      }
     }
 
     function startNewMatch(preserve = true) {
@@ -1302,7 +1412,10 @@
         match.teamA = { j1: prev.teamA?.j1 || '', j2: prev.teamA?.j2 || '' };
         match.teamB = { j1: prev.teamB?.j1 || '', j2: prev.teamB?.j2 || '' };
       }
+      
+      currentMatchId = match.id;
       saveMatch(match);
+      registerActiveMatch(match);
       bindHeaderInputs();
       recalcAndRender();
     }
@@ -1315,17 +1428,31 @@
         const { database } = window.firebase;
         
         console.log('Loading current match from Firebase...');
-        const matchRef = ref(database, CURRENT_MATCH_REF);
-        const snapshot = await get(matchRef);
         
-        if (snapshot.exists()) {
-          const parsed = snapshot.val();
-          const match = ensureMatchStructure(parsed);
-          console.log('Match loaded from Firebase:', match);
-          console.log('Fecha cargada desde Firebase:', match.fecha);
-          return match;
+        // Primero intentar cargar desde localStorage para obtener la mesa
+        let mesaFromStorage = '';
+        try {
+          const storedMatch = localStorage.getItem(MATCH_KEY);
+          if (storedMatch) {
+            const parsed = JSON.parse(storedMatch);
+            mesaFromStorage = parsed.mesa || '';
+          }
+        } catch (e) {
+          console.log('No stored match found in localStorage');
         }
-        console.log('No current match found in Firebase, creating default');
+        
+        // Si hay mesa en localStorage, buscar partida activa del dispositivo en esa mesa
+        if (mesaFromStorage) {
+          const activeMatch = await getActiveMatchForTable(mesaFromStorage);
+          if (activeMatch) {
+            console.log('Found active match for table:', activeMatch);
+            currentMatchId = activeMatch.id;
+            return ensureMatchStructure(activeMatch);
+          }
+        }
+        
+        // Si no hay partida activa, crear una nueva
+        console.log('No active match found, creating default');
         return defaultMatch();
       } catch (error) {
         console.error('Error loading match from Firebase:', error);
@@ -1334,7 +1461,9 @@
           const raw = localStorage.getItem(MATCH_KEY);
           if (!raw) return defaultMatch();
           const parsed = JSON.parse(raw);
-          return ensureMatchStructure(parsed);
+          const match = ensureMatchStructure(parsed);
+          currentMatchId = match.id;
+          return match;
         } catch {
           return defaultMatch();
         }
@@ -1349,9 +1478,10 @@
         const { database } = window.firebase;
         
         console.log('Saving current match to Firebase:', m);
-        console.log('Fecha que se está guardando:', m.fecha);
-        const matchRef = ref(database, CURRENT_MATCH_REF);
-        await set(matchRef, m);
+        
+        // Guardar en la colección de partidas activas
+        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${m.id}`);
+        await set(activeMatchesRef, m);
         
         // También guardar en localStorage como backup
         localStorage.setItem(MATCH_KEY, JSON.stringify(m));
@@ -1372,6 +1502,8 @@
       console.log('Match loaded:', match);
       console.log('Match inProgress:', match.inProgress);
       
+      currentMatchId = match.id;
+      
       bindHeaderInputs();
       recalcAndRender();
       
@@ -1380,7 +1512,7 @@
       console.log('initializeMatch completed');
     }
 
-        function setupRealtimeSync() {
+    function setupRealtimeSync() {
       try {
         if (window.firebase && window.firebaseRefs) {
           const { ref, onValue } = window.firebaseRefs;
@@ -1388,19 +1520,21 @@
           
           console.log('Setting up real-time sync...');
           
-          // Sincronizar partida actual
-          const matchRef = ref(database, CURRENT_MATCH_REF);
-          onValue(matchRef, (snapshot) => {
-            if (snapshot.exists() && !autoFinalizing) {
-              const updatedMatch = snapshot.val();
-              if (updatedMatch && updatedMatch.id !== match?.id) {
-                console.log('Match updated from Firebase:', updatedMatch);
-                match = ensureMatchStructure(updatedMatch);
-                bindHeaderInputs();
-                recalcAndRender();
+          // Sincronizar partida activa del dispositivo
+          if (currentMatchId) {
+            const matchRef = ref(database, `${ACTIVE_MATCHES_REF}/${currentMatchId}`);
+            onValue(matchRef, (snapshot) => {
+              if (snapshot.exists() && !autoFinalizing) {
+                const updatedMatch = snapshot.val();
+                if (updatedMatch && updatedMatch.deviceId === getDeviceId()) {
+                  console.log('Match updated from Firebase:', updatedMatch);
+                  match = ensureMatchStructure(updatedMatch);
+                  bindHeaderInputs();
+                  recalcAndRender();
+                }
               }
-            }
-          });
+            });
+          }
 
           // Sincronizar historial de partidas
           const matchesRef = ref(database, MATCH_REF);
@@ -1436,17 +1570,12 @@
     }
 
     function bindHeaderInputs() {
-      console.log('bindHeaderInputs called with match:', match);
-      
       if (!match) {
         console.error('Match is null in bindHeaderInputs');
         return;
       }
       
-      console.log('Setting fecha input to:', match.fecha);
       fechaInput.value = match.fecha || '';
-      console.log('Fecha input value after setting:', fechaInput.value);
-      
       mesaInput.value = match.mesa || '';
       targetSelect.value = String(match.target || 100);
       targetDisplay.textContent = String(match.target || 100);
@@ -1459,25 +1588,12 @@
       const setDisabled = !match.inProgress;
       const hasRounds = match.rounds && match.rounds.length > 0;
       
-      console.log('Match inProgress:', match.inProgress);
-      console.log('setDisabled:', setDisabled);
-      console.log('addRoundBtn will be disabled:', setDisabled);
-      
       // Bloquear nombres de equipos si ya hay rondas iniciadas
       const teamNamesLocked = hasRounds && match.inProgress;
       
       [fechaInput, mesaInput, targetSelect, addRoundBtn].forEach(el => { 
         el.disabled = setDisabled; 
         el.classList.toggle('opacity-60', setDisabled); 
-        console.log(`Element ${el.id || el.className} disabled:`, el.disabled);
-      });
-      
-      // Verificación adicional para el botón de agregar ronda
-      console.log('Add round button final state:', {
-        disabled: addRoundBtn.disabled,
-        opacity: addRoundBtn.classList.contains('opacity-60'),
-        matchInProgress: match.inProgress,
-        setDisabled: setDisabled
       });
       
       [a1, a2, b1, b2].forEach(el => { 
@@ -1537,7 +1653,7 @@
         inA.value = r.a ?? '';
         inA.placeholder = '0';
         
-        // Bloquear edición si ya tiene puntos confirmados (diferentes de undefined/null)
+        // Bloquear edición si ya tiene puntos confirmados
         const hasPointsA = r.a !== undefined && r.a !== null;
         const hasPointsB = r.b !== undefined && r.b !== null;
         const isLocked = (hasPointsA && r.a > 0) || (hasPointsB && r.b > 0);
@@ -1550,11 +1666,10 @@
           inA.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              inA.blur(); // Esto activará el evento blur
+              inA.blur();
             }
           });
           inA.addEventListener('blur', () => {
-            // Solo confirmar si hay un valor válido
             const value = parseInt(inA.value || '0', 10);
             if (!isNaN(value) && value >= 0) {
               r.a = value;
@@ -1581,11 +1696,10 @@
           inB.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              inB.blur(); // Esto activará el evento blur
+              inB.blur();
             }
           });
           inB.addEventListener('blur', () => {
-            // Solo confirmar si hay un valor válido
             const value = parseInt(inB.value || '0', 10);
             if (!isNaN(value) && value >= 0) {
               r.b = value;
@@ -1623,7 +1737,6 @@
     async function recordFinalizedMatch() {
       try {
         const { totalA, totalB, winner } = computeTotals();
-        // Lisa: un equipo no obtuvo ningún punto durante toda la partida
         const lisa = totalA === 0 || totalB === 0;
         const matches = await loadMatches();
         matches.push({
@@ -1633,15 +1746,18 @@
           target: match.target,
           teamA: { j1: match.teamA.j1, j2: match.teamA.j2 },
           teamB: { j1: match.teamB.j1, j2: match.teamB.j2 },
-          rounds: [...match.rounds], // Incluir las rondas para el modal
+          rounds: [...match.rounds],
           totalA,
           totalB,
           winner,
           lisa,
-          closedAt: new Date().getTime() // Usar timestamp local en lugar de Date.now()
+          closedAt: new Date().getTime()
         });
         await saveMatches(matches);
         await renderClasificatoria();
+        
+        // Desregistrar partida activa
+        await unregisterActiveMatch(match.id);
       } catch (error) {
         console.error('Error recording finalized match:', error);
       }
@@ -1651,15 +1767,12 @@
       if (autoFinalizing || !match.inProgress) return;
       autoFinalizing = true;
       try {
-        // Finalize current
         match.inProgress = false;
-        match.closedAt = new Date().getTime(); // Usar timestamp local
+        match.closedAt = new Date().getTime();
         await saveMatch(match);
         bindHeaderInputs();
         recalcAndRender();
-        // Record on leaderboard/history
         await recordFinalizedMatch();
-        // Brief pause to show result, then start new match preserving settings
         setTimeout(() => {
           autoFinalizing = false;
           startNewMatch(true);
@@ -1679,11 +1792,10 @@
       const pct = Math.min(100, (leader / match.target) * 100);
       progressBar.style.width = pct.toFixed(0) + '%';
 
-      // Mostrar ganador visual solo si está en curso y hay diferencia
       cardA.classList.toggle('winner', totalA > totalB && match.inProgress);
       cardB.classList.toggle('winner', totalB > totalA && match.inProgress);
 
-      const reached = winner !== null; // Alguien llegó a la meta
+      const reached = winner !== null;
       progressBadge.textContent = reached ? 'Objetivo alcanzado' : 'En curso';
       progressBadge.className = 'badge ' + (reached ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700');
       finalizeBtn.disabled = !match.inProgress || !reached;
@@ -1693,7 +1805,6 @@
         if (winner === 'A') ganador = 'Equipo A';
         else if (winner === 'B') ganador = 'Equipo B';
         winnerText.textContent = ganador;
-        // Lisa: un equipo no obtuvo ningún punto durante toda la partida
         const esLisa = totalA === 0 || totalB === 0;
         lisaText.textContent = esLisa ? 'Sí' : 'No';
       } else {
@@ -1703,51 +1814,59 @@
 
       renderRounds();
 
-      // Auto-finalize if target reached
       if (match.inProgress && reached) {
         autoFinalizeAndRestart();
       }
     }
 
     // Binders
-    targetSelect.addEventListener('change', () => { match.target = parseInt(targetSelect.value, 10); targetDisplay.textContent = targetSelect.value; saveMatch(match); recalcAndRender(); });
+    targetSelect.addEventListener('change', () => { 
+      match.target = parseInt(targetSelect.value, 10); 
+      targetDisplay.textContent = targetSelect.value; 
+      saveMatch(match); 
+      recalcAndRender(); 
+    });
+    
     fechaInput.addEventListener('change', () => { 
-      console.log('Fecha seleccionada:', fechaInput.value);
       match.fecha = fechaInput.value;
-      console.log('Fecha guardada en match:', match.fecha);
       saveMatch(match); 
     });
-    mesaInput.addEventListener('input', () => { match.mesa = mesaInput.value; saveMatch(match); });
+    
+    // Validar mesa antes de permitir cambios
+    mesaInput.addEventListener('input', async () => { 
+      const newMesa = mesaInput.value;
+      
+      if (newMesa !== match.mesa) {
+        const isAvailable = await isTableAvailable(newMesa);
+        if (!isAvailable) {
+          alert(`La mesa ${newMesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
+          mesaInput.value = match.mesa;
+          return;
+        }
+        
+        if (match.mesa) {
+          await unregisterActiveMatch(match.id);
+        }
+        
+        match.mesa = newMesa;
+        await registerActiveMatch(match);
+        saveMatch(match);
+      }
+    });
+    
     a1.addEventListener('input', () => { match.teamA.j1 = a1.value; saveMatch(match); });
     a2.addEventListener('input', () => { match.teamA.j2 = a2.value; saveMatch(match); });
     b1.addEventListener('input', () => { match.teamB.j1 = b1.value; saveMatch(match); });
     b2.addEventListener('input', () => { match.teamB.j2 = b2.value; saveMatch(match); });
 
     addRoundBtn.addEventListener('click', () => {
-      console.log('Add round button clicked');
-      console.log('Match state:', match);
+      if (!match || !match.inProgress) return;
       
-      if (!match) {
-        console.error('Match is null, cannot add round');
-        return;
-      }
-      
-      if (!match.inProgress) {
-        console.log('Match is not in progress, cannot add round');
-        return;
-      }
-      
-      console.log('Adding new round...');
-      
-      // Asegurar que rounds sea un array
       if (!Array.isArray(match.rounds)) {
-        console.log('Rounds is not an array, initializing...');
         match.rounds = [];
       }
       
       match.rounds.push({ a: 0, b: 0 });
-      console.log('New rounds array:', match.rounds);
-      
       saveMatch(match);
       recalcAndRender();
     });
@@ -1759,22 +1878,6 @@
     newMatchBtn.addEventListener('click', () => {
       startNewMatch(true);
     });
-
-
-
-
-
-
-
-
-
-    // Función para formatear fechas correctamente (evita problemas de zona horaria)
-    function formatDateForInput(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
 
     // Funciones para filtros de clasificación
     function updateClasificacionPeriodoInfo() {
@@ -1794,9 +1897,9 @@
       } else if (periodoSelect.value === '90') {
         infoText = 'Mostrando últimos 3 meses';
       } else if (periodoSelect.value === '365') {
-        infoText = 'Mostrando último año';
+        infoText = 'Último año';
       } else if (periodoSelect.value === 'all') {
-        infoText = 'Mostrando todas las partidas';
+        infoText = 'Todas las partidas';
       } else if (fechaDesde || fechaHasta) {
         if (fechaDesde && fechaHasta) {
           infoText = `Desde ${new Date(fechaDesde).toLocaleDateString('es-ES')} hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
@@ -1806,7 +1909,7 @@
           infoText = `Hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
         }
       } else {
-        infoText = 'Mostrando todas las partidas';
+        infoText = 'Todas las partidas';
       }
       
       infoDiv.textContent = infoText;
@@ -1824,9 +1927,8 @@
         const desde = new Date();
         desde.setDate(desde.getDate() - parseInt(days));
         
-        // Usar funciones locales para evitar problemas de zona horaria
-        fechaDesde.value = formatDateForInput(desde);
-        fechaHasta.value = formatDateForInput(hasta);
+        fechaDesde.value = desde.toISOString().split('T')[0];
+        fechaHasta.value = hasta.toISOString().split('T')[0];
       }
       
       updateClasificacionPeriodoInfo();
@@ -1853,7 +1955,7 @@
 
     if (clasifFechaDesde) {
       clasifFechaDesde.addEventListener('change', () => {
-        clasifPeriodo.value = ''; // Reset período rápido
+        clasifPeriodo.value = '';
         updateClasificacionPeriodoInfo();
         renderClasificatoria().catch(error => {
           console.error('Error refreshing classification:', error);
@@ -1863,7 +1965,7 @@
 
     if (clasifFechaHasta) {
       clasifFechaHasta.addEventListener('change', () => {
-        clasifPeriodo.value = ''; // Reset período rápido
+        clasifPeriodo.value = '';
         updateClasificacionPeriodoInfo();
         renderClasificatoria().catch(error => {
           console.error('Error refreshing classification:', error);
@@ -1887,17 +1989,9 @@
         match.fecha = todayYmd();
       }
       
-      // Debug: verificar fecha
-      console.log('Fecha actual (local):', new Date().toLocaleDateString('es-ES'));
-      console.log('Fecha actual (ISO):', new Date().toISOString().split('T')[0]);
-      console.log('Fecha generada por todayYmd():', todayYmd());
-      console.log('Fecha del match:', match.fecha);
-      
-      // Inicializar información del período de clasificación
       updateClasificacionPeriodoInfo();
     }).catch(error => {
       console.error('Error initializing match:', error);
-      // Fallback: crear match por defecto
       match = defaultMatch();
       bindHeaderInputs();
       recalcAndRender();
