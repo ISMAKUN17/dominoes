@@ -94,6 +94,9 @@
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl md:text-2xl font-bold text-slate-800">🎲 Gestión de Partidas</h2>
         <div class="flex items-center gap-3">
+          <button id="view-occupied-tables-btn" class="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-700">
+            🪑 Mesas Ocupadas
+          </button>
           <button id="add-match-btn" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-green-700">
             ➕ Nueva Partida
           </button>
@@ -277,12 +280,40 @@
     </div>
   </div>
 
+  <!-- Modal de mesas ocupadas -->
+  <div id="occupied-tables-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-orange-500">🪑</span> Mesas Ocupadas
+        </h3>
+        <button id="close-occupied-tables-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+      </div>
+
+      <div class="p-6">
+        <div id="occupied-tables-loading" class="text-center py-8 text-slate-500">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+          <p class="mt-2">Cargando mesas ocupadas...</p>
+        </div>
+        
+        <div id="occupied-tables-empty" class="text-center py-8 text-slate-500 hidden">
+          <p class="text-lg">No hay mesas ocupadas en este momento.</p>
+        </div>
+
+        <div id="occupied-tables-list" class="space-y-4 hidden">
+          <!-- Las mesas se llenarán dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // Configuración
       const MATCHES_KEY = 'domino_matches_v1';
       const MATCH_REF = 'domino_matches';
       const CURRENT_MATCH_REF = 'current_match';
+      const ACTIVE_MATCHES_REF = 'active_matches';
 
       // Elementos DOM
       const matchesBody = document.getElementById('matches-body');
@@ -299,6 +330,14 @@
       const exportAllBtn = document.getElementById('export-all-btn');
       const refreshBtn = document.getElementById('refresh-btn');
       const clearFiltersBtn = document.getElementById('clear-filters');
+      
+      // Elementos del modal de mesas ocupadas
+      const occupiedTablesModal = document.getElementById('occupied-tables-modal');
+      const closeOccupiedTablesModal = document.getElementById('close-occupied-tables-modal');
+      const viewOccupiedTablesBtn = document.getElementById('view-occupied-tables-btn');
+      const occupiedTablesList = document.getElementById('occupied-tables-list');
+      const occupiedTablesLoading = document.getElementById('occupied-tables-loading');
+      const occupiedTablesEmpty = document.getElementById('occupied-tables-empty');
 
       // Filtros
       const filterFechaDesde = document.getElementById('filter-fecha-desde');
@@ -389,6 +428,186 @@
           alert('Error al eliminar la partida: ' + error.message);
         }
       }
+
+      // Funciones para mesas ocupadas
+      async function loadActiveMatches() {
+        try {
+          await waitForFirebase();
+          const { ref, get } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+          const snapshot = await get(activeMatchesRef);
+          
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            return Object.values(data || {});
+          }
+          return [];
+        } catch (error) {
+          console.error('Error loading active matches:', error);
+          return [];
+        }
+      }
+
+      async function closeActiveMatch(matchId) {
+        try {
+          await waitForFirebase();
+          const { ref, remove } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const activeMatchRef = ref(database, `${ACTIVE_MATCHES_REF}/${matchId}`);
+          await remove(activeMatchRef);
+          
+          // Recargar y mostrar mesas ocupadas
+          await loadAndShowOccupiedTables();
+          alert('Mesa cerrada correctamente');
+        } catch (error) {
+          console.error('Error closing active match:', error);
+          alert('Error al cerrar la mesa: ' + error.message);
+        }
+      }
+
+      function computeMatchTotalsForActive(match) {
+        let totalA = 0;
+        let totalB = 0;
+        
+        if (match.rounds && Array.isArray(match.rounds)) {
+          for (const r of match.rounds) {
+            totalA += Number(r.a) || 0;
+            totalB += Number(r.b) || 0;
+          }
+        }
+        
+        return { totalA, totalB };
+      }
+
+      async function loadAndShowOccupiedTables() {
+        try {
+          // Mostrar loading
+          occupiedTablesLoading.classList.remove('hidden');
+          occupiedTablesList.classList.add('hidden');
+          occupiedTablesEmpty.classList.add('hidden');
+
+          const activeMatches = await loadActiveMatches();
+
+          // Ocultar loading
+          occupiedTablesLoading.classList.add('hidden');
+
+          // Filtrar solo partidas con rondas iniciadas y mesa asignada
+          const matchesWithRounds = activeMatches.filter(m => 
+            m.inProgress && 
+            m.rounds && 
+            m.rounds.length > 0 && 
+            m.mesa && 
+            m.mesa.trim() !== ''
+          );
+
+          if (matchesWithRounds.length === 0) {
+            occupiedTablesEmpty.classList.remove('hidden');
+            return;
+          }
+
+          // Ordenar por número de mesa
+          matchesWithRounds.sort((a, b) => {
+            const mesaA = Number(a.mesa) || 0;
+            const mesaB = Number(b.mesa) || 0;
+            return mesaA - mesaB;
+          });
+
+          // Renderizar mesas
+          occupiedTablesList.innerHTML = '';
+          occupiedTablesList.classList.remove('hidden');
+
+          matchesWithRounds.forEach((match) => {
+            const { totalA, totalB } = computeMatchTotalsForActive(match);
+            const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+            const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+            
+            const leader = Math.max(totalA, totalB);
+            const progress = match.target ? Math.min(100, (leader / match.target) * 100) : 0;
+
+            const tableCard = document.createElement('div');
+            tableCard.className = 'rounded-xl border-2 border-slate-200 bg-white p-4 hover:shadow-md transition-shadow';
+            
+            tableCard.innerHTML = `
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <h4 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span>🪑</span> Mesa ${match.mesa || 'N/A'}
+                  </h4>
+                  <p class="text-sm text-slate-600 mt-1">Modalidad: ${match.target || 100} puntos</p>
+                  <p class="text-xs text-slate-500 mt-1">ID: ${match.id || 'N/A'}</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-slate-500">Rondas</div>
+                  <div class="text-lg font-bold text-slate-700">${match.rounds?.length || 0}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-blue-50 rounded-lg p-3 ${totalA > totalB ? 'ring-2 ring-green-500' : ''}">
+                  <div class="text-xs text-blue-600 font-semibold mb-1">Equipo A</div>
+                  <div class="text-sm font-semibold text-slate-800 mb-2">${equipoA}</div>
+                  <div class="text-2xl font-extrabold text-blue-600">${totalA}</div>
+                </div>
+                <div class="bg-red-50 rounded-lg p-3 ${totalB > totalA ? 'ring-2 ring-green-500' : ''}">
+                  <div class="text-xs text-red-600 font-semibold mb-1">Equipo B</div>
+                  <div class="text-sm font-semibold text-slate-800 mb-2">${equipoB}</div>
+                  <div class="text-2xl font-extrabold text-red-600">${totalB}</div>
+                </div>
+              </div>
+
+              <div class="mt-3 mb-4">
+                <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
+                  <span>Progreso</span>
+                  <span class="font-semibold">${progress.toFixed(0)}%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div class="h-2 bg-gradient-to-r from-orange-500 to-emerald-500 transition-all" style="width:${progress}%"></div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button onclick="closeActiveMatchFromAdmin('${match.id}')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                  🚪 Cerrar Mesa
+                </button>
+              </div>
+            `;
+
+            occupiedTablesList.appendChild(tableCard);
+          });
+
+        } catch (error) {
+          console.error('Error loading occupied tables:', error);
+          occupiedTablesLoading.classList.add('hidden');
+          occupiedTablesList.innerHTML = `
+            <div class="text-center py-8 text-red-600">
+              <p>Error al cargar las mesas ocupadas.</p>
+              <p class="text-sm mt-1">${error.message}</p>
+            </div>
+          `;
+          occupiedTablesList.classList.remove('hidden');
+        }
+      }
+
+      function showOccupiedTablesModal() {
+        occupiedTablesModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        loadAndShowOccupiedTables();
+      }
+
+      function hideOccupiedTablesModal() {
+        occupiedTablesModal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      // Función global para cerrar mesa desde el admin
+      window.closeActiveMatchFromAdmin = async function(matchId) {
+        if (confirm('¿Estás seguro de que deseas cerrar esta mesa? La partida se eliminará de las mesas activas.')) {
+          await closeActiveMatch(matchId);
+        }
+      };
 
       // Funciones de renderizado
       function filterMatches(matches) {
@@ -837,6 +1056,7 @@
         if (e.key === 'Escape') {
           if (!matchModal.classList.contains('hidden')) hideModal();
           if (!deleteModal.classList.contains('hidden')) deleteModal.classList.add('hidden');
+          if (!occupiedTablesModal.classList.contains('hidden')) hideOccupiedTablesModal();
         }
       });
 
@@ -848,6 +1068,23 @@
       deleteModal.addEventListener('click', (e) => {
         if (e.target === deleteModal) deleteModal.classList.add('hidden');
       });
+
+      // Event listeners para mesas ocupadas
+      if (viewOccupiedTablesBtn) {
+        viewOccupiedTablesBtn.addEventListener('click', showOccupiedTablesModal);
+      }
+
+      if (closeOccupiedTablesModal) {
+        closeOccupiedTablesModal.addEventListener('click', hideOccupiedTablesModal);
+      }
+
+      if (occupiedTablesModal) {
+        occupiedTablesModal.addEventListener('click', (e) => {
+          if (e.target === occupiedTablesModal) {
+            hideOccupiedTablesModal();
+          }
+        });
+      }
 
       // Inicialización
       async function initialize() {
