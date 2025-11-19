@@ -188,6 +188,24 @@
       <div id="no-results" class="text-center py-8 text-slate-500 hidden">
         No se encontraron partidas con los filtros aplicados.
       </div>
+
+      <!-- Controles de paginación -->
+      <div id="pagination-controls" class="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+        <div class="text-sm text-slate-600">
+          Mostrando <span id="pagination-info" class="font-semibold">0 - 0</span> de <span id="pagination-total" class="font-semibold">0</span> partidas
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="pagination-prev" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold">
+            ← Anterior
+          </button>
+          <div id="pagination-numbers" class="flex items-center gap-1">
+            <!-- Los números de página se generarán dinámicamente -->
+          </div>
+          <button id="pagination-next" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold">
+            Siguiente →
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- Modal de detalles de partida -->
@@ -295,6 +313,33 @@
       </div>
     </div>
 
+    <!-- Modal de mesas ocupadas -->
+    <div id="occupied-tables-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-blue-500">🪑</span> Mesas Ocupadas
+          </h3>
+          <button id="close-occupied-tables-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+        </div>
+
+        <div class="p-6">
+          <div id="occupied-tables-loading" class="text-center py-8 text-slate-500">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p class="mt-2">Cargando mesas ocupadas...</p>
+          </div>
+          
+          <div id="occupied-tables-empty" class="text-center py-8 text-slate-500 hidden">
+            <p class="text-lg">No hay mesas ocupadas en este momento.</p>
+          </div>
+
+          <div id="occupied-tables-list" class="space-y-4 hidden">
+            <!-- Las mesas se llenarán dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Detalle de partida -->
     <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6" aria-labelledby="detalle-title" id="detalle-section">
       <div class="flex items-center justify-between mb-4">
@@ -302,6 +347,9 @@
           <span class="text-indigo-500">🎲</span> Detalle de Partida
         </h2>
         <div class="flex items-center gap-2 text-sm">
+          <button id="view-occupied-tables" type="button" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-blue-700 active:bg-blue-800">
+            <span>🪑</span> Ver Mesas Ocupadas
+          </button>
           <span id="match-status" class="badge bg-yellow-100 text-yellow-700">En curso</span>
         </div>
       </div>
@@ -413,7 +461,7 @@
       </div>
       
       <!-- Filtros de clasificación -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
         <div>
           <label for="clasif-fecha-desde" class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
           <input type="date" id="clasif-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
@@ -432,6 +480,10 @@
             <option value="365">Último año</option>
             <option value="all">Todas las partidas</option>
           </select>
+        </div>
+        <div>
+          <label for="clasif-min-partidas" class="block text-sm font-semibold text-slate-700 mb-1">Mín. partidas</label>
+          <input type="number" id="clasif-min-partidas" min="0" step="1" placeholder="Sin mínimo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
         </div>
         <div class="flex items-end">
           <button id="clasif-limpiar-filtros" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
@@ -634,6 +686,9 @@
     const tbody = document.getElementById('clasificacion-body');
     const sortBtn = document.getElementById('sort-efficiency');
     const sortIcon = document.getElementById('eff-sort-icon');
+    
+    // Almacenar posiciones anteriores de los jugadores para mostrar cambios
+    let previousPositions = new Map(); // Map<playerName, position>
 
     async function renderClasificatoria() {
       try {
@@ -643,23 +698,86 @@
         const fechaDesde = document.getElementById('clasif-fecha-desde')?.value || null;
         const fechaHasta = document.getElementById('clasif-fecha-hasta')?.value || null;
         
+        // Obtener filtro de mínimo de partidas
+        const minPartidasInput = document.getElementById('clasif-min-partidas');
+        const minPartidas = minPartidasInput?.value ? parseInt(minPartidasInput.value, 10) : 0;
+        
         const players = deriveStatsFromMatches(matches, fechaDesde, fechaHasta);
 
-        players.sort((a, b) => {
+        // Aplicar filtro de mínimo de partidas
+        const filteredPlayers = players.filter((p) => {
+          const { total } = compute(p);
+          return total >= minPartidas;
+        });
+
+        filteredPlayers.sort((a, b) => {
           const ea = compute(a).eff;
           const eb = compute(b).eff;
           return sortDesc ? eb - ea : ea - eb;
         });
 
+      // Crear mapa de posiciones actuales
+      const currentPositions = new Map();
+      filteredPlayers.forEach((p, index) => {
+        if (p.name) {
+          currentPositions.set(p.name, index + 1); // Posición 1-indexed
+        }
+      });
+
       tbody.innerHTML = '';
-      players.forEach((p) => {
+      filteredPlayers.forEach((p, index) => {
         const { total, eff } = compute(p);
+        const currentPosition = index + 1;
+        const previousPosition = previousPositions.get(p.name);
+        
+        // Determinar el cambio de posición
+        let positionChange = null; // null = sin cambio, 'up' = subió, 'down' = bajó
+        if (previousPosition !== undefined && previousPosition !== null) {
+          if (currentPosition < previousPosition) {
+            positionChange = 'up'; // Subió de puesto
+          } else if (currentPosition > previousPosition) {
+            positionChange = 'down'; // Bajó de puesto
+          }
+        }
+
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50';
 
         const tdName = document.createElement('td');
         tdName.className = 'px-4 py-3';
-        tdName.textContent = p.name || '-';
+        
+        // Crear contenedor para nombre y flecha
+        const nameContainer = document.createElement('div');
+        nameContainer.className = 'flex items-center gap-2';
+        
+        const nameText = document.createElement('span');
+        nameText.textContent = p.name || '-';
+        nameContainer.appendChild(nameText);
+        
+        // Agregar flecha si hay cambio de posición
+        if (positionChange === 'up') {
+          const arrowUp = document.createElement('span');
+          arrowUp.className = 'inline-flex items-center text-green-600';
+          arrowUp.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+          `;
+          arrowUp.title = `Subió ${previousPosition - currentPosition} puesto(s)`;
+          nameContainer.appendChild(arrowUp);
+        } else if (positionChange === 'down') {
+          const arrowDown = document.createElement('span');
+          arrowDown.className = 'inline-flex items-center text-red-600';
+          arrowDown.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          `;
+          arrowDown.title = `Bajó ${currentPosition - previousPosition} puesto(s)`;
+          nameContainer.appendChild(arrowDown);
+        }
+        
+        tdName.appendChild(nameContainer);
 
         const tdW = document.createElement('td');
         tdW.className = 'px-4 py-3';
@@ -697,6 +815,9 @@
         tr.appendChild(tdE);
         tbody.appendChild(tr);
       });
+
+      // Actualizar posiciones anteriores para la próxima comparación
+      previousPositions = currentPositions;
 
       sortIcon.style.transform = sortDesc ? 'rotate(0deg)' : 'rotate(180deg)';
       } catch (error) {
@@ -749,11 +870,17 @@
 
     let historialSortDesc = true;
     let allMatchesData = []; // Para almacenar los datos completos incluyendo rounds
+    
+    // Variables de paginación
+    let currentPage = 1;
+    const itemsPerPage = 20; // Partidas por página
+    let filteredMatchesForPagination = []; // Partidas filtradas para paginación
 
     async function showHistorial() {
       clasificatoriaSection.classList.add('hidden');
       detalleSection.classList.add('hidden');
       historialSection.classList.remove('hidden');
+      currentPage = 1; // Resetear a la primera página al mostrar historial
       await renderHistorial();
     }
 
@@ -837,33 +964,53 @@
         const filteredMatches = filterMatches(allMatches);
         console.log('🔍 Filtered matches:', filteredMatches);
         
-        // Ordenar por fecha
+        // Ordenar por fecha - BUG CORREGIDO: cambiado a.closedAt por b.closedAt
         filteredMatches.sort((a, b) => {
           const dateA = new Date(a.fecha || a.closedAt);
-          const dateB = new Date(b.fecha || a.closedAt);
+          const dateB = new Date(b.fecha || b.closedAt);
           return historialSortDesc ? dateB - dateA : dateA - dateB;
         });
 
-        // Actualizar estadísticas
+        // Guardar partidas filtradas para paginación
+        filteredMatchesForPagination = filteredMatches;
+
+        // Actualizar estadísticas (usar todas las partidas filtradas, no solo la página actual)
         const stats = calculateStats(filteredMatches);
         statsTotal.textContent = stats.total;
         statsLisas.textContent = stats.lisas;
         statsPromedio.textContent = stats.promedioPuntos;
         statsDuracion.textContent = stats.promedioRondas;
 
+        // Calcular paginación
+        const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
+        
+        // Asegurar que currentPage no exceda el total de páginas
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        } else if (currentPage < 1) {
+          currentPage = 1;
+        }
+
+        // Obtener partidas de la página actual
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const matchesForCurrentPage = filteredMatches.slice(startIndex, endIndex);
+
         // Renderizar tabla
         historialBody.innerHTML = '';
         
         if (filteredMatches.length === 0) {
           noResults.classList.remove('hidden');
+          document.getElementById('pagination-controls').classList.add('hidden');
           console.log('📭 No matches found to display');
           return;
         }
         
         noResults.classList.add('hidden');
-        console.log(`📋 Rendering ${filteredMatches.length} matches`);
+        document.getElementById('pagination-controls').classList.remove('hidden');
+        console.log(`📋 Rendering ${matchesForCurrentPage.length} matches (page ${currentPage} of ${totalPages})`);
         
-        filteredMatches.forEach((match, index) => {
+        matchesForCurrentPage.forEach((match, index) => {
           const row = document.createElement('tr');
           row.className = 'hover:bg-slate-50';
 
@@ -916,6 +1063,9 @@
           
           historialBody.appendChild(row);
         });
+
+        // Actualizar controles de paginación
+        updatePaginationControls(filteredMatches.length, totalPages);
         
         console.log('✅ History rendered successfully');
       } catch (error) {
@@ -993,7 +1143,111 @@
       filterJugador.value = '';
       filterModalidad.value = '';
       filterSoloLisas.checked = false;
+      currentPage = 1; // Resetear a la primera página
       await renderHistorial();
+    }
+
+    // Función para actualizar controles de paginación
+    function updatePaginationControls(totalItems, totalPages) {
+      const paginationInfo = document.getElementById('pagination-info');
+      const paginationTotal = document.getElementById('pagination-total');
+      const paginationPrev = document.getElementById('pagination-prev');
+      const paginationNext = document.getElementById('pagination-next');
+      const paginationNumbers = document.getElementById('pagination-numbers');
+
+      if (!paginationInfo || !paginationTotal || !paginationPrev || !paginationNext || !paginationNumbers) {
+        return;
+      }
+
+      // Actualizar información de paginación
+      const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+      const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+      paginationInfo.textContent = `${startItem} - ${endItem}`;
+      paginationTotal.textContent = totalItems;
+
+      // Habilitar/deshabilitar botones
+      paginationPrev.disabled = currentPage === 1;
+      paginationNext.disabled = currentPage === totalPages || totalPages === 0;
+
+      // Generar números de página
+      paginationNumbers.innerHTML = '';
+      
+      if (totalPages === 0) {
+        return;
+      }
+
+      // Mostrar máximo 5 números de página alrededor de la página actual
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      // Ajustar si estamos cerca del inicio o del final
+      if (endPage - startPage < 4) {
+        if (startPage === 1) {
+          endPage = Math.min(5, totalPages);
+        } else if (endPage === totalPages) {
+          startPage = Math.max(1, totalPages - 4);
+        }
+      }
+
+      // Botón para primera página si no está visible
+      if (startPage > 1) {
+        const firstBtn = document.createElement('button');
+        firstBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+        firstBtn.textContent = '1';
+        firstBtn.addEventListener('click', () => {
+          currentPage = 1;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(firstBtn);
+        
+        if (startPage > 2) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-2 text-slate-500';
+          ellipsis.textContent = '...';
+          paginationNumbers.appendChild(ellipsis);
+        }
+      }
+
+      // Números de página
+      for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `px-3 py-2 rounded-lg border text-sm font-semibold ${
+          i === currentPage
+            ? 'bg-primary-600 text-white border-primary-600'
+            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+        }`;
+        pageBtn.textContent = i;
+        pageBtn.addEventListener('click', () => {
+          currentPage = i;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(pageBtn);
+      }
+
+      // Botón para última página si no está visible
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-2 text-slate-500';
+          ellipsis.textContent = '...';
+          paginationNumbers.appendChild(ellipsis);
+        }
+        
+        const lastBtn = document.createElement('button');
+        lastBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+        lastBtn.textContent = totalPages;
+        lastBtn.addEventListener('click', () => {
+          currentPage = totalPages;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(lastBtn);
+      }
     }
 
     function showMatchDetails(match) {
@@ -1178,6 +1432,7 @@
     
     sortFechaBtn.addEventListener('click', () => {
       historialSortDesc = !historialSortDesc;
+      currentPage = 1; // Resetear a la primera página al cambiar orden
       renderHistorial().catch(error => {
         console.error('Error sorting history:', error);
       });
@@ -1200,12 +1455,222 @@
 
     // Filtros en tiempo real
     [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
-      filter.addEventListener('input', () => renderHistorial().catch(error => {
-        console.error('Error filtering history:', error);
-      }));
-      filter.addEventListener('change', () => renderHistorial().catch(error => {
-        console.error('Error filtering history:', error);
-      }));
+      filter.addEventListener('input', () => {
+        currentPage = 1; // Resetear a la primera página al filtrar
+        renderHistorial().catch(error => {
+          console.error('Error filtering history:', error);
+        });
+      });
+      filter.addEventListener('change', () => {
+        currentPage = 1; // Resetear a la primera página al filtrar
+        renderHistorial().catch(error => {
+          console.error('Error filtering history:', error);
+        });
+      });
+    });
+
+    // Event listeners para paginación
+    const paginationPrev = document.getElementById('pagination-prev');
+    const paginationNext = document.getElementById('pagination-next');
+
+    if (paginationPrev) {
+      paginationPrev.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        }
+      });
+    }
+
+    if (paginationNext) {
+      paginationNext.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredMatchesForPagination.length / itemsPerPage);
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        }
+      });
+    }
+
+    // ======================
+    // Modal de mesas ocupadas
+    // ======================
+    const occupiedTablesModal = document.getElementById('occupied-tables-modal');
+    const closeOccupiedTablesModal = document.getElementById('close-occupied-tables-modal');
+    const viewOccupiedTablesBtn = document.getElementById('view-occupied-tables');
+    const occupiedTablesList = document.getElementById('occupied-tables-list');
+    const occupiedTablesLoading = document.getElementById('occupied-tables-loading');
+    const occupiedTablesEmpty = document.getElementById('occupied-tables-empty');
+
+    // Función para calcular totales de una partida
+    function computeMatchTotals(match) {
+      let totalA = 0;
+      let totalB = 0;
+      
+      if (match.rounds && Array.isArray(match.rounds)) {
+        for (const r of match.rounds) {
+          totalA += Number(r.a) || 0;
+          totalB += Number(r.b) || 0;
+        }
+      }
+      
+      return { totalA, totalB };
+    }
+
+    // Función para cargar y mostrar mesas ocupadas
+    async function loadAndShowOccupiedTables() {
+      try {
+        // Mostrar loading
+        occupiedTablesLoading.classList.remove('hidden');
+        occupiedTablesList.classList.add('hidden');
+        occupiedTablesEmpty.classList.add('hidden');
+
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+
+        // Ocultar loading
+        occupiedTablesLoading.classList.add('hidden');
+
+        if (!snapshot.exists()) {
+          occupiedTablesEmpty.classList.remove('hidden');
+          return;
+        }
+
+        const activeMatches = snapshot.val();
+        const matchesArray = Object.values(activeMatches || {}).filter(m => 
+          m.inProgress && 
+          m.rounds && 
+          m.rounds.length > 0 && 
+          m.mesa && 
+          m.mesa.trim() !== ''
+        );
+
+        if (matchesArray.length === 0) {
+          occupiedTablesEmpty.classList.remove('hidden');
+          return;
+        }
+
+        // Ordenar por número de mesa
+        matchesArray.sort((a, b) => {
+          const mesaA = Number(a.mesa) || 0;
+          const mesaB = Number(b.mesa) || 0;
+          return mesaA - mesaB;
+        });
+
+        // Renderizar mesas
+        occupiedTablesList.innerHTML = '';
+        occupiedTablesList.classList.remove('hidden');
+
+        matchesArray.forEach((match) => {
+          const { totalA, totalB } = computeMatchTotals(match);
+          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+          
+          const leader = Math.max(totalA, totalB);
+          const progress = match.target ? Math.min(100, (leader / match.target) * 100) : 0;
+          const isCurrentMatch = match.id === currentMatchId;
+
+          const tableCard = document.createElement('div');
+          tableCard.className = `rounded-xl border-2 p-4 ${isCurrentMatch ? 'border-primary-500 bg-primary-50' : 'border-slate-200 bg-white'}`;
+          
+          tableCard.innerHTML = `
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h4 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span>🪑</span> Mesa ${match.mesa || 'N/A'}
+                  ${isCurrentMatch ? '<span class="badge bg-primary-600 text-white text-xs">Tu partida</span>' : ''}
+                </h4>
+                <p class="text-sm text-slate-600 mt-1">Modalidad: ${match.target || 100} puntos</p>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-500">Rondas</div>
+                <div class="text-lg font-bold text-slate-700">${match.rounds?.length || 0}</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="bg-blue-50 rounded-lg p-3 ${totalA > totalB ? 'ring-2 ring-green-500' : ''}">
+                <div class="text-xs text-blue-600 font-semibold mb-1">Equipo A</div>
+                <div class="text-sm font-semibold text-slate-800 mb-2">${equipoA}</div>
+                <div class="text-2xl font-extrabold text-blue-600">${totalA}</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 ${totalB > totalA ? 'ring-2 ring-green-500' : ''}">
+                <div class="text-xs text-red-600 font-semibold mb-1">Equipo B</div>
+                <div class="text-sm font-semibold text-slate-800 mb-2">${equipoB}</div>
+                <div class="text-2xl font-extrabold text-red-600">${totalB}</div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
+                <span>Progreso</span>
+                <span class="font-semibold">${progress.toFixed(0)}%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-2 bg-gradient-to-r from-primary-500 to-emerald-500 transition-all" style="width:${progress}%"></div>
+              </div>
+            </div>
+          `;
+
+          occupiedTablesList.appendChild(tableCard);
+        });
+
+      } catch (error) {
+        console.error('Error loading occupied tables:', error);
+        occupiedTablesLoading.classList.add('hidden');
+        occupiedTablesList.innerHTML = `
+          <div class="text-center py-8 text-red-600">
+            <p>Error al cargar las mesas ocupadas.</p>
+            <p class="text-sm mt-1">${error.message}</p>
+          </div>
+        `;
+        occupiedTablesList.classList.remove('hidden');
+      }
+    }
+
+    // Función para mostrar el modal
+    function showOccupiedTablesModal() {
+      occupiedTablesModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      loadAndShowOccupiedTables();
+    }
+
+    // Función para ocultar el modal
+    function hideOccupiedTablesModal() {
+      occupiedTablesModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Event listeners para el modal de mesas ocupadas
+    if (viewOccupiedTablesBtn) {
+      viewOccupiedTablesBtn.addEventListener('click', showOccupiedTablesModal);
+    }
+
+    if (closeOccupiedTablesModal) {
+      closeOccupiedTablesModal.addEventListener('click', hideOccupiedTablesModal);
+    }
+
+    if (occupiedTablesModal) {
+      occupiedTablesModal.addEventListener('click', (e) => {
+        if (e.target === occupiedTablesModal) {
+          hideOccupiedTablesModal();
+        }
+      });
+    }
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !occupiedTablesModal.classList.contains('hidden')) {
+        hideOccupiedTablesModal();
+      }
     });
 
     // ======================
@@ -1415,7 +1880,7 @@
       
       currentMatchId = match.id;
       saveMatch(match);
-      registerActiveMatch(match);
+      // No registrar como activa hasta que se agregue la primera ronda
       bindHeaderInputs();
       recalcAndRender();
     }
@@ -1479,9 +1944,12 @@
         
         console.log('Saving current match to Firebase:', m);
         
-        // Guardar en la colección de partidas activas
-        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${m.id}`);
-        await set(activeMatchesRef, m);
+        // Solo guardar en active_matches si la partida tiene rondas iniciadas y está en progreso
+        // Esto evita que se registren partidas vacías como activas
+        if (m.inProgress && m.rounds && m.rounds.length > 0 && m.mesa) {
+          const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${m.id}`);
+          await set(activeMatchesRef, m);
+        }
         
         // También guardar en localStorage como backup
         localStorage.setItem(MATCH_KEY, JSON.stringify(m));
@@ -1503,6 +1971,16 @@
       console.log('Match inProgress:', match.inProgress);
       
       currentMatchId = match.id;
+      
+      // Si la partida tiene rondas iniciadas y está en progreso, registrar como activa
+      if (match.inProgress && match.rounds && match.rounds.length > 0 && match.mesa) {
+        const isAvailable = await isTableAvailable(match.mesa);
+        if (isAvailable) {
+          await registerActiveMatch(match);
+        } else {
+          console.warn(`Mesa ${match.mesa} ya está ocupada. La partida no se registrará como activa.`);
+        }
+      }
       
       bindHeaderInputs();
       recalcAndRender();
@@ -1543,6 +2021,17 @@
               console.log('Matches updated from Firebase, refreshing classification');
               renderClasificatoria().catch(error => {
                 console.error('Error refreshing classification from Firebase:', error);
+              });
+            }
+          });
+
+          // Sincronizar mesas ocupadas (actualizar modal si está abierto)
+          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+          onValue(activeMatchesRef, (snapshot) => {
+            if (snapshot.exists() && occupiedTablesModal && !occupiedTablesModal.classList.contains('hidden')) {
+              console.log('Active matches updated, refreshing occupied tables modal');
+              loadAndShowOccupiedTables().catch(error => {
+                console.error('Error refreshing occupied tables:', error);
               });
             }
           });
@@ -1832,24 +2321,35 @@
       saveMatch(match); 
     });
     
-    // Validar mesa antes de permitir cambios
+    // Permitir cambiar el número de mesa sin validar ocupación (solo se valida al iniciar partida)
     mesaInput.addEventListener('input', async () => { 
       const newMesa = mesaInput.value;
       
       if (newMesa !== match.mesa) {
-        const isAvailable = await isTableAvailable(newMesa);
-        if (!isAvailable) {
-          alert(`La mesa ${newMesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
-          mesaInput.value = match.mesa;
-          return;
-        }
-        
-        if (match.mesa) {
-          await unregisterActiveMatch(match.id);
+        // Si ya hay rondas iniciadas, validar que la nueva mesa esté disponible
+        if (match.rounds && match.rounds.length > 0) {
+          if (newMesa && newMesa.trim() !== '') {
+            const isAvailable = await isTableAvailable(newMesa);
+            if (!isAvailable) {
+              alert(`La mesa ${newMesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
+              mesaInput.value = match.mesa;
+              return;
+            }
+          }
+          
+          // Desregistrar la mesa anterior
+          if (match.mesa) {
+            await unregisterActiveMatch(match.id);
+          }
         }
         
         match.mesa = newMesa;
-        await registerActiveMatch(match);
+        
+        // Solo registrar como activa si ya hay rondas iniciadas y la mesa es válida
+        if (match.rounds && match.rounds.length > 0 && match.mesa && match.mesa.trim() !== '') {
+          await registerActiveMatch(match);
+        }
+        
         saveMatch(match);
       }
     });
@@ -1859,11 +2359,28 @@
     b1.addEventListener('input', () => { match.teamB.j1 = b1.value; saveMatch(match); });
     b2.addEventListener('input', () => { match.teamB.j2 = b2.value; saveMatch(match); });
 
-    addRoundBtn.addEventListener('click', () => {
+    addRoundBtn.addEventListener('click', async () => {
       if (!match || !match.inProgress) return;
       
       if (!Array.isArray(match.rounds)) {
         match.rounds = [];
+      }
+      
+      // Si es la primera ronda, validar que la mesa esté disponible
+      if (match.rounds.length === 0) {
+        if (!match.mesa || match.mesa.trim() === '') {
+          alert('Por favor, ingresa el número de mesa antes de iniciar la partida.');
+          return;
+        }
+        
+        const isAvailable = await isTableAvailable(match.mesa);
+        if (!isAvailable) {
+          alert(`La mesa ${match.mesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
+          return;
+        }
+        
+        // Registrar la partida como activa en esta mesa
+        await registerActiveMatch(match);
       }
       
       match.rounds.push({ a: 0, b: 0 });
@@ -1941,6 +2458,7 @@
       document.getElementById('clasif-fecha-desde').value = '';
       document.getElementById('clasif-fecha-hasta').value = '';
       document.getElementById('clasif-periodo').value = '';
+      document.getElementById('clasif-min-partidas').value = '';
       updateClasificacionPeriodoInfo();
       renderClasificatoria().catch(error => {
         console.error('Error refreshing classification:', error);
@@ -1951,6 +2469,7 @@
     const clasifFechaDesde = document.getElementById('clasif-fecha-desde');
     const clasifFechaHasta = document.getElementById('clasif-fecha-hasta');
     const clasifPeriodo = document.getElementById('clasif-periodo');
+    const clasifMinPartidas = document.getElementById('clasif-min-partidas');
     const clasifLimpiarFiltros = document.getElementById('clasif-limpiar-filtros');
 
     if (clasifFechaDesde) {
@@ -1976,6 +2495,19 @@
     if (clasifPeriodo) {
       clasifPeriodo.addEventListener('change', () => {
         setClasificacionPeriodo(clasifPeriodo.value);
+      });
+    }
+
+    if (clasifMinPartidas) {
+      clasifMinPartidas.addEventListener('input', () => {
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+      clasifMinPartidas.addEventListener('change', () => {
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
       });
     }
 
