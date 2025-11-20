@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Liga Dominó y Romo</title>
+    <title>Dashboard Liga Dominó y Romo V4.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
     <!-- Firebase SDK -->
     <script type="module">
+      // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
       import { getDatabase, ref, set, get, push, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
+      // Your web app's Firebase configuration
       const firebaseConfig = {
         apiKey: "AIzaSyALR-b68phh_u92V3rw9B9Ei7FcexU2xc8",
         authDomain: "proyectos17-98695.firebaseapp.com",
@@ -24,48 +26,129 @@
         measurementId: "G-XMNRJBKCZD"
       };
 
+      // Initialize Firebase
       const app = initializeApp(firebaseConfig);
       const database = getDatabase(app);
       const analytics = getAnalytics(app);
 
+      // Hacer Firebase disponible globalmente
       window.firebase = { app, database, analytics };
       window.firebaseRefs = { ref, set, get, push, onValue, off, remove };
+      
+      console.log('Firebase initialized successfully');
+      console.log('Database:', database);
+      console.log('Analytics:', analytics);
+      
+      // Verificar que las funciones estén disponibles
+      if (ref && set && get && push && onValue && off && remove) {
+        console.log('✅ Todas las funciones de Firebase Database están disponibles');
+      } else {
+        console.error('❌ Algunas funciones de Firebase Database no están disponibles');
+        console.log('ref:', !!ref, 'set:', !!set, 'get:', !!get, 'push:', !!push, 'onValue:', !!onValue, 'off:', !!off, 'remove:', !!remove);
+      }
     </script>
-    
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] }
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            colors: {
+              primary: {
+                50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+                400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+                800: '#1e40af', 900: '#1e3a8a'
+              }
+            }
           }
         }
       }
     </script>
+    <style>
+      .winner { outline: 2px solid #16a34a; outline-offset: 4px; border-radius: 0.75rem; }
+      .badge { display:inline-flex; align-items:center; gap:0.25rem; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
+      /* Estilos para autocompletado */
+      #autocomplete-equipoA-jugador1,
+      #autocomplete-equipoA-jugador2,
+      #autocomplete-equipoB-jugador1,
+      #autocomplete-equipoB-jugador2 {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+    </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 text-slate-800 font-sans">
 
   <header class="sticky top-0 z-10 backdrop-blur-sm bg-white/70 border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+    <div class="max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
       <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-        <span class="bg-gradient-to-r from-red-600 to-purple-600 bg-clip-text text-transparent">🔐 Admin - Liga Dominó y Romo</span>
+        <span class="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">Liga Dominó y Romo - V2.0</span>
       </h1>
-      <div class="flex items-center gap-4">
-        <a href="index.html" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
-          🎲 Volver al Dashboard
-        </a>
-        <span id="connection-status" class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full">
-          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Conectado
+      <div class="hidden sm:flex items-center gap-2 text-sm text-slate-600">
+        <span id="connection-status" class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> Inicializando...
         </span>
+
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8" role="main">
+  <main class="max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8" role="main">
 
-    <!-- Estadísticas generales -->
-    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6">
-      <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-4">📊 Estadísticas Generales</h2>
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+
+    <!-- Historial de partidas -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6 hidden" aria-labelledby="historial-title" id="historial-section">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 id="historial-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-slate-500">📊</span> Historial de Partidas
+        </h2>
+        <div class="flex items-center gap-2">
+          <button id="export-csv" class="inline-flex items-center gap-2 rounded-xl bg-green-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-green-700">
+            📥 Exportar CSV
+          </button>
+          <button id="back-to-main" class="inline-flex items-center gap-2 rounded-xl bg-slate-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-slate-700">
+            ← Volver
+          </button>
+        </div>
+      </div>
+      
+      <!-- Filtros -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div>
+          <label for="filter-fecha-desde" class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
+          <input type="date" id="filter-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-fecha-hasta" class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
+          <input type="date" id="filter-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-jugador" class="block text-sm font-semibold text-slate-700 mb-1">Jugador</label>
+          <input type="text" id="filter-jugador" placeholder="Buscar jugador..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="filter-modalidad" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
+          <select id="filter-modalidad" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Todas</option>
+            <option value="100">100</option>
+            <option value="150">150</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" id="filter-solo-lisas" class="rounded border-slate-300 focus:ring-primary-500">
+            Solo mostrar lisas
+          </label>
+        </div>
+        <div class="md:col-span-2 flex items-end">
+          <button id="clear-filters" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Estadísticas resumen -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-blue-50 p-4 rounded-xl text-center">
           <div class="text-2xl font-bold text-blue-600" id="stats-total">0</div>
           <div class="text-sm text-blue-600">Total partidas</div>
@@ -82,70 +165,9 @@
           <div class="text-2xl font-bold text-orange-600" id="stats-duracion">0</div>
           <div class="text-sm text-orange-600">Rondas promedio</div>
         </div>
-        <div class="bg-red-50 p-4 rounded-xl text-center">
-          <div class="text-2xl font-bold text-red-600" id="stats-jugadores">0</div>
-          <div class="text-sm text-red-600">Jugadores únicos</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Gestión de partidas -->
-    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl md:text-2xl font-bold text-slate-800">🎲 Gestión de Partidas</h2>
-        <div class="flex items-center gap-3">
-          <button id="view-occupied-tables-btn" class="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-700">
-            🪑 Mesas Ocupadas
-          </button>
-          <button id="add-match-btn" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-green-700">
-            ➕ Nueva Partida
-          </button>
-          <button id="export-all-btn" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
-            📥 Exportar Todo
-          </button>
-          <button id="refresh-btn" class="inline-flex items-center gap-2 bg-slate-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-700">
-            🔄 Refrescar
-          </button>
-        </div>
       </div>
 
-      <!-- Filtros avanzados -->
-      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
-          <input type="date" id="filter-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
-          <input type="date" id="filter-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Jugador</label>
-          <input type="text" id="filter-jugador" placeholder="Buscar jugador..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
-          <select id="filter-modalidad" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Todas</option>
-            <option value="100">100</option>
-            <option value="150">150</option>
-            <option value="200">200</option>
-          </select>
-        </div>
-        <div>
-          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <input type="checkbox" id="filter-solo-lisas" class="rounded border-slate-300 focus:ring-blue-500">
-            Solo lisas
-          </label>
-        </div>
-        <div>
-          <button id="clear-filters" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
-            Limpiar
-          </button>
-        </div>
-      </div>
-
-      <!-- Tabla de partidas -->
+      <!-- Tabla de historial -->
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 text-slate-700">
@@ -164,12 +186,11 @@
               <th class="px-4 py-3 text-left font-semibold">Puntos B</th>
               <th class="px-4 py-3 text-left font-semibold">Ganador</th>
               <th class="px-4 py-3 text-left font-semibold">Lisa</th>
-              <th class="px-4 py-3 text-left font-semibold">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="matches-body" class="divide-y divide-slate-200"></tbody>
-        </table>
-      </div>
+                    </tr>
+                </thead>
+          <tbody id="historial-body" class="divide-y divide-slate-200"></tbody>
+            </table>
+        </div>
 
       <div id="no-results" class="text-center py-8 text-slate-500 hidden">
         No se encontraron partidas con los filtros aplicados.
@@ -193,29 +214,166 @@
         </div>
       </div>
     </section>
-  </main>
 
-  <!-- Modal para editar/crear partida -->
-  <div id="match-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-        <h3 id="modal-title" class="text-xl font-bold text-slate-800">Editar Partida</h3>
-        <button id="close-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+    <!-- Modal de detalles de partida -->
+    <div id="match-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-blue-500">🎲</span> Detalles de la Partida
+          </h3>
+          <button id="close-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+            </div>
+
+        <div class="p-6 space-y-6">
+          <!-- Información general -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Fecha</div>
+              <div id="modal-fecha" class="text-lg font-semibold">-</div>
+                </div>
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Mesa</div>
+              <div id="modal-mesa" class="text-lg font-semibold">-</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl">
+              <div class="text-sm text-slate-600">Modalidad</div>
+              <div id="modal-modalidad" class="text-lg font-semibold">-</div>
+                </div>
+            </div>
+
+          <!-- Equipos y resultado -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-slate-200 rounded-xl p-4" id="modal-team-a">
+              <div class="text-center mb-4">
+                <h4 class="text-lg font-bold text-slate-800">Equipo A</h4>
+                <div id="modal-players-a" class="text-slate-600 mt-1">-</div>
+                </div>
+              <div class="text-center">
+                <div id="modal-total-a" class="text-4xl font-extrabold text-slate-800">0</div>
+                <div class="text-sm text-slate-600">Puntos totales</div>
+              </div>
+            </div>
+            
+            <div class="border border-slate-200 rounded-xl p-4" id="modal-team-b">
+              <div class="text-center mb-4">
+                <h4 class="text-lg font-bold text-slate-800">Equipo B</h4>
+                <div id="modal-players-b" class="text-slate-600 mt-1">-</div>
+              </div>
+              <div class="text-center">
+                <div id="modal-total-b" class="text-4xl font-extrabold text-slate-800">0</div>
+                <div class="text-sm text-slate-600">Puntos totales</div>
+                </div>
+            </div>
+        </div>
+
+          <!-- Resultado -->
+          <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Ganador</div>
+                <div id="modal-ganador" class="text-lg font-bold text-green-800">-</div>
+              </div>
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Lisa</div>
+                <div id="modal-lisa" class="text-lg font-bold text-green-800">-</div>
+              </div>
+              <div>
+                <div class="text-sm text-green-700 font-semibold">Duración</div>
+                <div id="modal-duracion" class="text-lg font-bold text-green-800">-</div>
+              </div>
+            </div>
+    </div>
+
+          <!-- Rondas detalladas -->
+          <div>
+            <h4 class="text-lg font-bold text-slate-800 mb-4">Desarrollo de la Partida</h4>
+            <div class="bg-slate-50 rounded-xl p-4">
+              <div class="grid grid-cols-4 gap-4 text-sm font-semibold text-slate-600 mb-3">
+                <div>Ronda</div>
+                <div>Equipo A</div>
+                <div>Equipo B</div>
+                <div>Acumulado</div>
+              </div>
+              <div id="modal-rounds" class="space-y-2">
+                <!-- Las rondas se llenarán dinámicamente -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Estadísticas adicionales -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-xl text-center">
+              <div id="modal-rondas-total" class="text-2xl font-bold text-blue-600">0</div>
+              <div class="text-sm text-blue-600">Rondas jugadas</div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-xl text-center">
+              <div id="modal-promedio-ronda" class="text-2xl font-bold text-purple-600">0</div>
+              <div class="text-sm text-purple-600">Puntos por ronda</div>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-xl text-center">
+              <div id="modal-diferencia" class="text-2xl font-bold text-orange-600">0</div>
+              <div class="text-sm text-orange-600">Diferencia final</div>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <form id="match-form" class="p-6 space-y-6">
+    </div>
+
+    <!-- Modal de mesas ocupadas -->
+    <div id="occupied-tables-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-blue-500">🪑</span> Mesas Ocupadas
+          </h3>
+          <button id="close-occupied-tables-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+        </div>
+
+        <div class="p-6">
+          <div id="occupied-tables-loading" class="text-center py-8 text-slate-500">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p class="mt-2">Cargando mesas ocupadas...</p>
+          </div>
+          
+          <div id="occupied-tables-empty" class="text-center py-8 text-slate-500 hidden">
+            <p class="text-lg">No hay mesas ocupadas en este momento.</p>
+          </div>
+
+          <div id="occupied-tables-list" class="space-y-4 hidden">
+            <!-- Las mesas se llenarán dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle de partida -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6" aria-labelledby="detalle-title" id="detalle-section">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="detalle-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-indigo-500">🎲</span> Detalle de Partida
+        </h2>
+        <div class="flex items-center gap-2 text-sm">
+          <button id="view-occupied-tables" type="button" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-blue-700 active:bg-blue-800">
+            <span>🪑</span> Ver Mesas Ocupadas
+          </button>
+          <span id="match-status" class="badge bg-yellow-100 text-yellow-700">En curso</span>
+        </div>
+      </div>
+
+      <form class="space-y-6" aria-describedby="ayuda-detalle">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label for="modal-fecha" class="block text-sm font-semibold text-slate-700 mb-1">Fecha</label>
-            <input type="date" id="modal-fecha" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label for="fecha" class="block text-sm font-semibold text-slate-700 mb-1">Fecha</label>
+            <input type="date" id="fecha" name="fecha" placeholder="DD/MM/AAAA" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
           </div>
           <div>
-            <label for="modal-mesa" class="block text-sm font-semibold text-slate-700 mb-1">Mesa</label>
-            <input type="number" id="modal-mesa" min="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label for="mesa" class="block text-sm font-semibold text-slate-700 mb-1">Mesa</label>
+            <input type="number" id="mesa" name="mesa" placeholder="Número de Mesa" min="1" step="1" inputmode="numeric" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
           </div>
           <div>
-            <label for="modal-target" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad</label>
-            <select id="modal-target" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label for="target" class="block text-sm font-semibold text-slate-700 mb-1">Modalidad (puntos objetivo)</label>
+            <select id="target" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               <option value="100">100</option>
               <option value="150">150</option>
               <option value="200">200</option>
@@ -223,520 +381,624 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="border border-slate-200 rounded-xl p-4">
-            <h4 class="text-lg font-bold text-slate-800 mb-3">Equipo A</h4>
-            <div class="space-y-3">
-              <div>
-                <label for="modal-teamA-j1" class="block text-sm text-slate-600">Jugador 1</label>
-                <input type="text" id="modal-teamA-j1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div>
-                <label for="modal-teamA-j2" class="block text-sm text-slate-600">Jugador 2</label>
-                <input type="text" id="modal-teamA-j2" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-800 mb-3">Equipos</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="rounded-xl border border-slate-200 p-4" id="cardA">
+              <fieldset>
+                <legend class="text-sm font-semibold text-slate-700">Equipo A</legend>
+                <label for="equipoA-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
+                <div class="relative">
+                  <input id="equipoA-jugador1" name="equipoA-jugador1" type="text" placeholder="Jugador 1" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoA-jugador1" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
+                <label for="equipoA-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
+                <div class="relative">
+                  <input id="equipoA-jugador2" name="equipoA-jugador2" type="text" placeholder="Jugador 2" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoA-jugador2" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
+              </fieldset>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4" id="cardB">
+              <fieldset>
+                <legend class="text-sm font-semibold text-slate-700">Equipo B</legend>
+                <label for="equipoB-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
+                <div class="relative">
+                  <input id="equipoB-jugador1" name="equipoB-jugador1" type="text" placeholder="Jugador 1" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoB-jugador1" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
+                <label for="equipoB-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
+                <div class="relative">
+                  <input id="equipoB-jugador2" name="equipoB-jugador2" type="text" placeholder="Jugador 2" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoB-jugador2" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
+              </fieldset>
             </div>
           </div>
-          
-          <div class="border border-slate-200 rounded-xl p-4">
-            <h4 class="text-lg font-bold text-slate-800 mb-3">Equipo B</h4>
-            <div class="space-y-3">
-              <div>
-                <label for="modal-teamB-j1" class="block text-sm text-slate-600">Jugador 1</label>
-                <input type="text" id="modal-teamB-j1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div>
-                <label for="modal-teamB-j2" class="block text-sm text-slate-600">Jugador 2</label>
-                <input type="text" id="modal-teamB-j2" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-          </div>
-        </div>
+                </div>
 
         <div>
-          <h4 class="text-lg font-bold text-slate-800 mb-3">Rondas</h4>
-          <div id="modal-rounds" class="space-y-3">
-            <!-- Las rondas se generarán dinámicamente -->
-          </div>
-          <button type="button" id="add-round-btn" class="mt-3 inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-200">
-            ➕ Agregar Ronda
-          </button>
-        </div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-slate-800">Rondas</h3>
+            <div class="flex items-center gap-2">
+              <button id="add-round" type="button" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-primary-700 active:bg-primary-800">+ Agregar ronda</button>
+              <button id="finalize-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 text-white px-3 py-2 text-sm font-semibold shadow hover:bg-emerald-700 active:bg-emerald-800">Finalizar partida</button>
+              <button id="new-match" type="button" class="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold shadow hover:bg-slate-200 active:bg-slate-300">Nueva partida</button>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-          <button type="button" id="cancel-btn" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">
-            Cancelar
-          </button>
-          <button type="submit" id="save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
-            Guardar Cambios
-          </button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 overflow-hidden">
+            <div class="grid grid-cols-12 bg-slate-50 text-sm font-semibold text-slate-600">
+              <div class="col-span-2 px-4 py-3">Ronda</div>
+              <div class="col-span-4 px-4 py-3">Equipo A</div>
+              <div class="col-span-4 px-4 py-3">Equipo B</div>
+              <div class="col-span-2 px-4 py-3">Acción</div>
+            </div>
+            <div id="rounds-list" class="divide-y divide-slate-200"></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Total Equipo A</div>
+              <div id="total-a" class="text-3xl font-extrabold mt-1">0</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Objetivo</div>
+              <div class="flex items-center gap-2 mt-1">
+                <div id="target-display" class="text-2xl font-extrabold">100</div>
+                <span id="progress-badge" class="badge bg-blue-100 text-blue-700">En curso</span>
+              </div>
+              <div class="mt-3">
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div id="progress-bar" class="h-2 bg-gradient-to-r from-primary-500 to-emerald-500" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="mt-3 space-y-1">
+                <div class="text-sm text-slate-600">Ganador: <span id="winner-text" class="font-semibold">-</span></div>
+                <div class="text-sm text-slate-600">Lisa: <span id="lisa-text" class="font-semibold">-</span></div>
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm text-slate-600">Total Equipo B</div>
+              <div id="total-b" class="text-3xl font-extrabold mt-1">0</div>
+            </div>
+          </div>
         </div>
       </form>
-    </div>
-  </div>
+    </section>
 
-  <!-- Modal de confirmación para eliminar -->
-  <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-      <div class="text-center">
-        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-          <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-          </svg>
+    <!-- Clasificatoria (solo lectura, calculada de partidas finalizadas) -->
+    <section class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6" aria-labelledby="clasificatoria-title" id="clasificatoria-section">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 id="clasificatoria-title" class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <span class="text-yellow-500">🏆</span> Clasificatoria
+        </h2>
+        <button id="show-history" class="inline-flex items-center gap-2 rounded-xl bg-slate-600 text-white px-4 py-2 text-sm font-semibold shadow hover:bg-slate-700 active:bg-slate-800">
+          <span>📊</span> Ver Historial
+        </button>
+      </div>
+      
+      <!-- Filtros de clasificación -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div>
+          <label for="clasif-fecha-desde" class="block text-sm font-semibold text-slate-700 mb-1">Desde</label>
+          <input type="date" id="clasif-fecha-desde" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
         </div>
-        <h3 class="text-lg font-medium text-slate-900 mb-2">¿Eliminar partida?</h3>
-        <p class="text-sm text-slate-500 mb-6">Esta acción no se puede deshacer. Se eliminará permanentemente la partida y se actualizará la clasificación.</p>
-        <div class="flex items-center justify-center gap-3">
-          <button id="cancel-delete" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">
-            Cancelar
+        <div>
+          <label for="clasif-fecha-hasta" class="block text-sm font-semibold text-slate-700 mb-1">Hasta</label>
+          <input type="date" id="clasif-fecha-hasta" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+          <label for="clasif-periodo" class="block text-sm font-semibold text-slate-700 mb-1">Período rápido</label>
+          <select id="clasif-periodo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Personalizado</option>
+            <option value="7">Últimos 7 días</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 3 meses</option>
+            <option value="365">Último año</option>
+            <option value="all">Todas las partidas</option>
+          </select>
+        </div>
+        <div>
+          <label for="clasif-min-partidas" class="block text-sm font-semibold text-slate-700 mb-1">Mín. partidas</label>
+          <input type="number" id="clasif-min-partidas" min="0" step="1" placeholder="Sin mínimo" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div class="flex items-end">
+          <button id="clasif-limpiar-filtros" class="w-full rounded-lg bg-slate-100 text-slate-700 px-3 py-2 text-sm font-semibold hover:bg-slate-200">
+            Limpiar filtros
           </button>
-          <button id="confirm-delete" class="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">
-            Eliminar
-          </button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Modal de mesas ocupadas -->
-  <div id="occupied-tables-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="text-orange-500">🪑</span> Mesas Ocupadas
-        </h3>
-        <button id="close-occupied-tables-modal" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">×</button>
+              <div class="flex items-center justify-between mb-3">
+          <p class="text-sm text-slate-600">Eficiencia = Victorias / (Victorias + Derrotas). Se calcula automáticamente a partir de partidas finalizadas.</p>
+          <div id="clasif-periodo-info" class="text-sm text-primary-600 font-medium">
+            Mostrando todas las partidas
+          </div>
+        </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold">Jugador</th>
+              <th class="px-4 py-3 text-left font-semibold">Victorias</th>
+              <th class="px-4 py-3 text-left font-semibold">Derrotas</th>
+              <th class="px-4 py-3 text-left font-semibold">Total</th>
+              <th class="px-4 py-3 text-left font-semibold">
+                <button id="sort-efficiency" class="inline-flex items-center gap-1 hover:text-primary-700">
+                  Eficiencia %
+                  <svg id="eff-sort-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 3a1 1 0 01.832.445l4 6A1 1 0 0114 11H6a1 1 0 01-.832-1.555l4-6A1 1 0 0110 3zm-4 8a1 1 0 100 2h8a1 1 0 100-2H6zm0 4a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="clasificacion-body" class="divide-y divide-slate-200"></tbody>
+        </table>
       </div>
+    </section>
 
-      <div class="p-6">
-        <div id="occupied-tables-loading" class="text-center py-8 text-slate-500">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-          <p class="mt-2">Cargando mesas ocupadas...</p>
-        </div>
-        
-        <div id="occupied-tables-empty" class="text-center py-8 text-slate-500 hidden">
-          <p class="text-lg">No hay mesas ocupadas en este momento.</p>
-        </div>
+  </main>
 
-        <div id="occupied-tables-list" class="space-y-4 hidden">
-          <!-- Las mesas se llenarán dinámicamente -->
-        </div>
-      </div>
-    </div>
-  </div>
+  <footer class="max-w-5xl mx-auto px-4 md:px-6 pb-10 text-center text-slate-500 text-sm">
+    <p>© 2025 Liga Dominó y Romo - By Ismael Butler</p>
+  </footer>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Configuración
-      const MATCHES_KEY = 'domino_matches_v1';
-      const MATCH_REF = 'domino_matches';
-      const CURRENT_MATCH_REF = 'current_match';
-      const ACTIVE_MATCHES_REF = 'active_matches';
-
-      // Elementos DOM
-      const matchesBody = document.getElementById('matches-body');
-      const noResults = document.getElementById('no-results');
-      const matchModal = document.getElementById('match-modal');
-      const deleteModal = document.getElementById('delete-modal');
-      const matchForm = document.getElementById('match-form');
-      const modalTitle = document.getElementById('modal-title');
-      const closeModal = document.getElementById('close-modal');
-      const cancelBtn = document.getElementById('cancel-btn');
-      const saveBtn = document.getElementById('save-btn');
-      const addRoundBtn = document.getElementById('add-round-btn');
-      const addMatchBtn = document.getElementById('add-match-btn');
-      const exportAllBtn = document.getElementById('export-all-btn');
-      const refreshBtn = document.getElementById('refresh-btn');
-      const clearFiltersBtn = document.getElementById('clear-filters');
-      
-      // Elementos del modal de mesas ocupadas
-      const occupiedTablesModal = document.getElementById('occupied-tables-modal');
-      const closeOccupiedTablesModal = document.getElementById('close-occupied-tables-modal');
-      const viewOccupiedTablesBtn = document.getElementById('view-occupied-tables-btn');
-      const occupiedTablesList = document.getElementById('occupied-tables-list');
-      const occupiedTablesLoading = document.getElementById('occupied-tables-loading');
-      const occupiedTablesEmpty = document.getElementById('occupied-tables-empty');
-
-      // Filtros
-      const filterFechaDesde = document.getElementById('filter-fecha-desde');
-      const filterFechaHasta = document.getElementById('filter-fecha-hasta');
-      const filterJugador = document.getElementById('filter-jugador');
-      const filterModalidad = document.getElementById('filter-modalidad');
-      const filterSoloLisas = document.getElementById('filter-solo-lisas');
-
-      // Estadísticas
-      const statsTotal = document.getElementById('stats-total');
-      const statsLisas = document.getElementById('stats-lisas');
-      const statsPromedio = document.getElementById('stats-promedio');
-      const statsDuracion = document.getElementById('stats-duracion');
-      const statsJugadores = document.getElementById('stats-jugadores');
-
-      // Variables globales
-      let allMatches = [];
-      let currentEditingMatch = null;
-      let historialSortDesc = true;
-      
-      // Variables de paginación
-      let currentPage = 1;
-      const itemsPerPage = 20; // Partidas por página
-      let filteredMatchesForPagination = []; // Partidas filtradas para paginación
-
-      // Funciones de Firebase
-      async function waitForFirebase() {
-        return new Promise((resolve) => {
+  document.addEventListener('DOMContentLoaded', () => {
+    // ======================
+    // Clasificatoria (derivada de historial) - Firebase
+    // ======================
+    const MATCHES_KEY = 'domino_matches_v1';
+    const MATCH_REF = 'domino_matches';
+    const CURRENT_MATCH_REF = 'current_match';
+    const ACTIVE_MATCHES_REF = 'active_matches'; // Nuevo: partidas activas por mesa
+    const DEVICE_ID_KEY = 'domino_device_id'; // Nuevo: ID único del dispositivo
+    
+    // Función para esperar a que Firebase esté disponible
+    function waitForFirebase() {
+      return new Promise((resolve, reject) => {
+        if (window.firebase && window.firebaseRefs) {
+          resolve();
+          return;
+        }
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 segundos máximo
+        
+        const checkInterval = setInterval(() => {
+          attempts++;
+          
           if (window.firebase && window.firebaseRefs) {
+            clearInterval(checkInterval);
+            console.log(`✅ Firebase disponible después de ${attempts * 100}ms`);
             resolve();
-          } else {
-            const checkInterval = setInterval(() => {
-              if (window.firebase && window.firebaseRefs) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, 100);
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.error('❌ Firebase no disponible después de 5 segundos');
+            reject(new Error('Firebase no se pudo inicializar en 5 segundos'));
           }
-        });
-      }
+        }, 100);
+      });
+    }
 
-      async function loadMatches() {
-        try {
-          await waitForFirebase();
-          const { ref, get } = window.firebaseRefs;
-          const { database } = window.firebase;
-          
-          const matchesRef = ref(database, MATCH_REF);
-          const snapshot = await get(matchesRef);
-          
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            const matches = Object.values(data || {});
-            return matches;
-          }
-          return [];
-        } catch (error) {
-          console.error('Error loading matches:', error);
-          try {
-            const raw = localStorage.getItem(MATCHES_KEY);
-            return raw ? JSON.parse(raw) : [];
-          } catch {
-            return [];
-          }
-        }
-      }
-
-      async function saveMatches(matches) {
-        try {
-          await waitForFirebase();
-          const { ref, set } = window.firebaseRefs;
-          const { database } = window.firebase;
-          
-          const matchesRef = ref(database, MATCH_REF);
-          await set(matchesRef, matches);
-          
-          localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-        } catch (error) {
-          console.error('Error saving matches:', error);
-          localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-        }
-      }
-
-      async function deleteMatch(matchId) {
-        try {
-          const updatedMatches = allMatches.filter(m => m.id !== matchId);
-          await saveMatches(updatedMatches);
-          allMatches = updatedMatches;
-          renderMatches();
-          updateStats();
-        } catch (error) {
-          console.error('Error deleting match:', error);
-          alert('Error al eliminar la partida: ' + error.message);
-        }
-      }
-
-      // Funciones para mesas ocupadas
-      async function loadActiveMatches() {
-        try {
-          await waitForFirebase();
-          const { ref, get } = window.firebaseRefs;
-          const { database } = window.firebase;
-          
-          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
-          const snapshot = await get(activeMatchesRef);
-          
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            return Object.values(data || {});
-          }
-          return [];
-        } catch (error) {
-          console.error('Error loading active matches:', error);
-          return [];
-        }
-      }
-
-      async function closeActiveMatch(matchId) {
-        try {
-          await waitForFirebase();
-          const { ref, remove } = window.firebaseRefs;
-          const { database } = window.firebase;
-          
-          const activeMatchRef = ref(database, `${ACTIVE_MATCHES_REF}/${matchId}`);
-          await remove(activeMatchRef);
-          
-          // Recargar y mostrar mesas ocupadas
-          await loadAndShowOccupiedTables();
-          alert('Mesa cerrada correctamente');
-        } catch (error) {
-          console.error('Error closing active match:', error);
-          alert('Error al cerrar la mesa: ' + error.message);
-        }
-      }
-
-      function computeMatchTotalsForActive(match) {
-        let totalA = 0;
-        let totalB = 0;
+    // Función para cargar partidas desde Firebase
+    async function loadMatches() {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
         
-        if (match.rounds && Array.isArray(match.rounds)) {
-          for (const r of match.rounds) {
-            totalA += Number(r.a) || 0;
-            totalB += Number(r.b) || 0;
-          }
-        }
+        console.log('Loading matches from Firebase...');
+        const matchesRef = ref(database, MATCH_REF);
+        const snapshot = await get(matchesRef);
         
-        return { totalA, totalB };
-      }
-
-      async function loadAndShowOccupiedTables() {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const matches = Object.values(data || {});
+          console.log('Matches loaded from Firebase:', matches);
+          return matches;
+        }
+        console.log('No matches found in Firebase, returning empty array');
+        return [];
+      } catch (error) {
+        console.error('Error loading matches from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
         try {
-          // Mostrar loading
-          occupiedTablesLoading.classList.remove('hidden');
-          occupiedTablesList.classList.add('hidden');
-          occupiedTablesEmpty.classList.add('hidden');
-
-          const activeMatches = await loadActiveMatches();
-
-          // Ocultar loading
-          occupiedTablesLoading.classList.add('hidden');
-
-          // Filtrar solo partidas con rondas iniciadas y mesa asignada
-          const matchesWithRounds = activeMatches.filter(m => 
-            m.inProgress && 
-            m.rounds && 
-            m.rounds.length > 0 && 
-            m.mesa && 
-            m.mesa.trim() !== ''
-          );
-
-          if (matchesWithRounds.length === 0) {
-            occupiedTablesEmpty.classList.remove('hidden');
-            return;
-          }
-
-          // Ordenar por número de mesa
-          matchesWithRounds.sort((a, b) => {
-            const mesaA = Number(a.mesa) || 0;
-            const mesaB = Number(b.mesa) || 0;
-            return mesaA - mesaB;
-          });
-
-          // Renderizar mesas
-          occupiedTablesList.innerHTML = '';
-          occupiedTablesList.classList.remove('hidden');
-
-          matchesWithRounds.forEach((match) => {
-            const { totalA, totalB } = computeMatchTotalsForActive(match);
-            const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
-            const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
-            
-            const leader = Math.max(totalA, totalB);
-            const progress = match.target ? Math.min(100, (leader / match.target) * 100) : 0;
-
-            const tableCard = document.createElement('div');
-            tableCard.className = 'rounded-xl border-2 border-slate-200 bg-white p-4 hover:shadow-md transition-shadow';
-            
-            tableCard.innerHTML = `
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <h4 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span>🪑</span> Mesa ${match.mesa || 'N/A'}
-                  </h4>
-                  <p class="text-sm text-slate-600 mt-1">Modalidad: ${match.target || 100} puntos</p>
-                  <p class="text-xs text-slate-500 mt-1">ID: ${match.id || 'N/A'}</p>
-                </div>
-                <div class="text-right">
-                  <div class="text-xs text-slate-500">Rondas</div>
-                  <div class="text-lg font-bold text-slate-700">${match.rounds?.length || 0}</div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="bg-blue-50 rounded-lg p-3 ${totalA > totalB ? 'ring-2 ring-green-500' : ''}">
-                  <div class="text-xs text-blue-600 font-semibold mb-1">Equipo A</div>
-                  <div class="text-sm font-semibold text-slate-800 mb-2">${equipoA}</div>
-                  <div class="text-2xl font-extrabold text-blue-600">${totalA}</div>
-                </div>
-                <div class="bg-red-50 rounded-lg p-3 ${totalB > totalA ? 'ring-2 ring-green-500' : ''}">
-                  <div class="text-xs text-red-600 font-semibold mb-1">Equipo B</div>
-                  <div class="text-sm font-semibold text-slate-800 mb-2">${equipoB}</div>
-                  <div class="text-2xl font-extrabold text-red-600">${totalB}</div>
-                </div>
-              </div>
-
-              <div class="mt-3 mb-4">
-                <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
-                  <span>Progreso</span>
-                  <span class="font-semibold">${progress.toFixed(0)}%</span>
-                </div>
-                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                  <div class="h-2 bg-gradient-to-r from-orange-500 to-emerald-500 transition-all" style="width:${progress}%"></div>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
-                <button onclick="closeActiveMatchFromAdmin('${match.id}')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
-                  🚪 Cerrar Mesa
-                </button>
-              </div>
-            `;
-
-            occupiedTablesList.appendChild(tableCard);
-          });
-
-        } catch (error) {
-          console.error('Error loading occupied tables:', error);
-          occupiedTablesLoading.classList.add('hidden');
-          occupiedTablesList.innerHTML = `
-            <div class="text-center py-8 text-red-600">
-              <p>Error al cargar las mesas ocupadas.</p>
-              <p class="text-sm mt-1">${error.message}</p>
-            </div>
-          `;
-          occupiedTablesList.classList.remove('hidden');
+          const raw = localStorage.getItem(MATCHES_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
         }
       }
+    }
 
-      function showOccupiedTablesModal() {
-        occupiedTablesModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        loadAndShowOccupiedTables();
+    // Función para guardar partidas en Firebase
+    async function saveMatches(list) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Saving matches to Firebase:', list);
+        const matchesRef = ref(database, MATCH_REF);
+        await set(matchesRef, list);
+        
+        // También guardar en localStorage como backup
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+        console.log('Matches saved successfully to Firebase and localStorage');
+      } catch (error) {
+        console.error('Error saving matches to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(list));
+        console.log('Matches saved to localStorage as fallback');
       }
+    }
 
-      function hideOccupiedTablesModal() {
-        occupiedTablesModal.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
+    function canonicalName(name) {
+      return (name || '').trim();
+    }
 
-      // Función global para cerrar mesa desde el admin
-      window.closeActiveMatchFromAdmin = async function(matchId) {
-        if (confirm('¿Estás seguro de que deseas cerrar esta mesa? La partida se eliminará de las mesas activas.')) {
-          await closeActiveMatch(matchId);
-        }
+    function deriveStatsFromMatches(matches, fechaDesde = null, fechaHasta = null) {
+      const nameToStats = new Map();
+      const ensure = (name) => {
+        const key = canonicalName(name);
+        if (!key) return null;
+        if (!nameToStats.has(key)) nameToStats.set(key, { name: key, wins: 0, losses: 0 });
+        return nameToStats.get(key);
       };
 
-      // Funciones de renderizado
-      function filterMatches(matches) {
-        return matches.filter(match => {
-          // Filtro por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
-          if (filterFechaDesde.value) {
-            let matchDate;
-            if (match.fecha) {
-              // Si hay fecha específica, usarla directamente
-              matchDate = match.fecha;
-            } else if (match.closedAt) {
-              // Si solo hay timestamp, convertirlo a fecha local
-              matchDate = new Date(match.closedAt).toISOString().split('T')[0];
-            } else {
-              return false; // Sin fecha, no incluir
-            }
-            
-            if (matchDate < filterFechaDesde.value) return false;
+      let filteredMatches = matches;
+      
+      // Aplicar filtros de fecha si están definidos
+      if (fechaDesde || fechaHasta) {
+        filteredMatches = matches.filter(m => {
+          if (!m || !m.closedAt) return false;
+          
+          const matchDate = new Date(m.fecha || m.closedAt);
+          
+          if (fechaDesde) {
+            const desde = new Date(fechaDesde);
+            if (matchDate < desde) return false;
           }
           
-          if (filterFechaHasta.value) {
-            let matchDate;
-            if (match.fecha) {
-              // Si hay fecha específica, usarla directamente
-              matchDate = match.fecha;
-            } else if (match.closedAt) {
-              // Si solo hay timestamp, convertirlo a fecha local
-              matchDate = new Date(match.closedAt).toISOString().split('T')[0];
-            } else {
-              return false; // Sin fecha, no incluir
-            }
-            
-            if (matchDate > filterFechaHasta.value) return false;
+          if (fechaHasta) {
+            const hasta = new Date(fechaHasta);
+            hasta.setHours(23, 59, 59, 999); // Incluir todo el día
+            if (matchDate > hasta) return false;
           }
-          
-          if (filterJugador.value) {
-            const searchTerm = filterJugador.value.toLowerCase();
-            const allPlayers = [
-              match.teamA?.j1, match.teamA?.j2,
-              match.teamB?.j1, match.teamB?.j2
-            ].filter(p => p).map(p => p.toLowerCase());
-            if (!allPlayers.some(p => p.includes(searchTerm))) return false;
-          }
-          
-          if (filterModalidad.value && String(match.target) !== filterModalidad.value) return false;
-          if (filterSoloLisas.checked && !match.lisa) return false;
           
           return true;
         });
       }
 
-      function calculateStats(matches) {
-        const total = matches.length;
-        const lisas = matches.filter(m => m.lisa).length;
-        const totalPuntos = matches.reduce((sum, m) => sum + (m.totalA || 0) + (m.totalB || 0), 0);
-        const promedioPuntos = total > 0 ? Math.round(totalPuntos / (total * 2)) : 0;
-        const promedioRondas = total > 0 ? Math.round(promedioPuntos / 15) : 0;
+      for (const m of filteredMatches) {
+        if (!m || !m.closedAt) continue;
+        const totalA = Number(m.totalA || 0);
+        const totalB = Number(m.totalB || 0);
+        let winner = null;
+        if (totalA > totalB) winner = 'A';
+        else if (totalB > totalA) winner = 'B';
+        if (!winner) continue;
+
+        const playersA = [m.teamA?.j1, m.teamA?.j2];
+        const playersB = [m.teamB?.j1, m.teamB?.j2];
+
+        if (winner === 'A') {
+          playersA.forEach(n => { const s = ensure(n); if (s) s.wins += 1; });
+          playersB.forEach(n => { const s = ensure(n); if (s) s.losses += 1; });
+        } else {
+          playersB.forEach(n => { const s = ensure(n); if (s) s.wins += 1; });
+          playersA.forEach(n => { const s = ensure(n); if (s) s.losses += 1; });
+        }
+      }
+
+      return Array.from(nameToStats.values());
+    }
+
+    function compute(player) {
+      const total = Number(player.wins || 0) + Number(player.losses || 0);
+      const eff = total > 0 ? (Number(player.wins || 0) / total) * 100 : 0;
+      return { total, eff };
+    }
+
+    let sortDesc = true; // ordenar por eficiencia descendente
+    const tbody = document.getElementById('clasificacion-body');
+    const sortBtn = document.getElementById('sort-efficiency');
+    const sortIcon = document.getElementById('eff-sort-icon');
+    
+    // Almacenar posiciones anteriores de los jugadores para mostrar cambios
+    let previousPositions = new Map(); // Map<playerName, position>
+
+    async function renderClasificatoria() {
+      try {
+        const matches = await loadMatches();
         
-        // Jugadores únicos
-        const uniquePlayers = new Set();
-        matches.forEach(match => {
-          [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
-            .filter(p => p)
-            .forEach(p => uniquePlayers.add(p.trim()));
+        // Obtener filtros de fecha
+        const fechaDesde = document.getElementById('clasif-fecha-desde')?.value || null;
+        const fechaHasta = document.getElementById('clasif-fecha-hasta')?.value || null;
+        
+        // Obtener filtro de mínimo de partidas
+        const minPartidasInput = document.getElementById('clasif-min-partidas');
+        const minPartidas = minPartidasInput?.value ? parseInt(minPartidasInput.value, 10) : 0;
+        
+        const players = deriveStatsFromMatches(matches, fechaDesde, fechaHasta);
+
+        // Aplicar filtro de mínimo de partidas
+        const filteredPlayers = players.filter((p) => {
+          const { total } = compute(p);
+          return total >= minPartidas;
         });
+
+        filteredPlayers.sort((a, b) => {
+          const ea = compute(a).eff;
+          const eb = compute(b).eff;
+          return sortDesc ? eb - ea : ea - eb;
+        });
+
+      // Crear mapa de posiciones actuales
+      const currentPositions = new Map();
+      filteredPlayers.forEach((p, index) => {
+        if (p.name) {
+          currentPositions.set(p.name, index + 1); // Posición 1-indexed
+        }
+      });
+
+      tbody.innerHTML = '';
+      filteredPlayers.forEach((p, index) => {
+        const { total, eff } = compute(p);
+        const currentPosition = index + 1;
+        const previousPosition = previousPositions.get(p.name);
         
-        return { total, lisas, promedioPuntos, promedioRondas, jugadoresUnicos: uniquePlayers.size };
-      }
+        // Determinar el cambio de posición
+        let positionChange = null; // null = sin cambio, 'up' = subió, 'down' = bajó
+        if (previousPosition !== undefined && previousPosition !== null) {
+          if (currentPosition < previousPosition) {
+            positionChange = 'up'; // Subió de puesto
+          } else if (currentPosition > previousPosition) {
+            positionChange = 'down'; // Bajó de puesto
+          }
+        }
 
-      function updateStats() {
-        const stats = calculateStats(allMatches);
-        statsTotal.textContent = stats.total;
-        statsLisas.textContent = stats.lisas;
-        statsPromedio.textContent = stats.promedioPuntos;
-        statsDuracion.textContent = stats.promedioRondas;
-        statsJugadores.textContent = stats.jugadoresUnicos;
-      }
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
 
-      function renderMatches() {
+        const tdName = document.createElement('td');
+        tdName.className = 'px-4 py-3';
+        
+        // Crear contenedor para nombre y flecha
+        const nameContainer = document.createElement('div');
+        nameContainer.className = 'flex items-center gap-2';
+        
+        const nameText = document.createElement('span');
+        nameText.textContent = p.name || '-';
+        nameContainer.appendChild(nameText);
+        
+        // Agregar flecha si hay cambio de posición
+        if (positionChange === 'up') {
+          const arrowUp = document.createElement('span');
+          arrowUp.className = 'inline-flex items-center text-green-600';
+          arrowUp.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+          `;
+          arrowUp.title = `Subió ${previousPosition - currentPosition} puesto(s)`;
+          nameContainer.appendChild(arrowUp);
+        } else if (positionChange === 'down') {
+          const arrowDown = document.createElement('span');
+          arrowDown.className = 'inline-flex items-center text-red-600';
+          arrowDown.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          `;
+          arrowDown.title = `Bajó ${currentPosition - previousPosition} puesto(s)`;
+          nameContainer.appendChild(arrowDown);
+        }
+        
+        tdName.appendChild(nameContainer);
+
+        const tdW = document.createElement('td');
+        tdW.className = 'px-4 py-3';
+        tdW.textContent = String(p.wins || 0);
+
+        const tdL = document.createElement('td');
+        tdL.className = 'px-4 py-3';
+        tdL.textContent = String(p.losses || 0);
+
+        const tdT = document.createElement('td');
+        tdT.className = 'px-4 py-3 text-slate-700';
+        tdT.textContent = String(total);
+
+        const tdE = document.createElement('td');
+        tdE.className = 'px-4 py-3';
+        const effWrap = document.createElement('div');
+        effWrap.className = 'space-y-1';
+        const barWrap = document.createElement('div');
+        barWrap.className = 'w-40 h-2 bg-slate-200 rounded-full overflow-hidden';
+        const bar = document.createElement('div');
+        bar.className = 'h-2 bg-gradient-to-r from-primary-500 to-green-500';
+        bar.style.width = Math.max(0, Math.min(100, eff)).toFixed(0) + '%';
+        barWrap.appendChild(bar);
+        const effText = document.createElement('div');
+        effText.className = 'text-xs text-slate-600';
+        effText.textContent = `${eff.toFixed(1)}%`;
+        effWrap.appendChild(barWrap);
+        effWrap.appendChild(effText);
+        tdE.appendChild(effWrap);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdW);
+        tr.appendChild(tdL);
+        tr.appendChild(tdT);
+        tr.appendChild(tdE);
+        tbody.appendChild(tr);
+      });
+
+      // Actualizar posiciones anteriores para la próxima comparación
+      previousPositions = currentPositions;
+
+      sortIcon.style.transform = sortDesc ? 'rotate(0deg)' : 'rotate(180deg)';
+      } catch (error) {
+        console.error('Error rendering classification:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-3 text-center text-red-600">Error al cargar la clasificación</td></tr>';
+      }
+    }
+
+    sortBtn.addEventListener('click', () => {
+      sortDesc = !sortDesc;
+      renderClasificatoria().catch(error => {
+        console.error('Error sorting classification:', error);
+      });
+    });
+
+    renderClasificatoria().catch(error => {
+      console.error('Error initializing classification:', error);
+    });
+
+    // ======================
+    // Historial de partidas
+    // ======================
+    const showHistoryBtn = document.getElementById('show-history');
+    const backToMainBtn = document.getElementById('back-to-main');
+    const exportCsvBtn = document.getElementById('export-csv');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    const sortFechaBtn = document.getElementById('sort-fecha');
+
+    const clasificatoriaSection = document.getElementById('clasificatoria-section');
+    const historialSection = document.getElementById('historial-section');
+    const detalleSection = document.getElementById('detalle-section');
+    
+    const filterFechaDesde = document.getElementById('filter-fecha-desde');
+    const filterFechaHasta = document.getElementById('filter-fecha-hasta');
+    const filterJugador = document.getElementById('filter-jugador');
+    const filterModalidad = document.getElementById('filter-modalidad');
+    const filterSoloLisas = document.getElementById('filter-solo-lisas');
+
+    const historialBody = document.getElementById('historial-body');
+    const noResults = document.getElementById('no-results');
+    
+    const statsTotal = document.getElementById('stats-total');
+    const statsLisas = document.getElementById('stats-lisas');
+    const statsPromedio = document.getElementById('stats-promedio');
+    const statsDuracion = document.getElementById('stats-duracion');
+
+    // Modal elements
+    const modal = document.getElementById('match-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+
+    let historialSortDesc = true;
+    let allMatchesData = []; // Para almacenar los datos completos incluyendo rounds
+    
+    // Variables de paginación
+    let currentPage = 1;
+    const itemsPerPage = 20; // Partidas por página
+    let filteredMatchesForPagination = []; // Partidas filtradas para paginación
+
+    async function showHistorial() {
+      clasificatoriaSection.classList.add('hidden');
+      detalleSection.classList.add('hidden');
+      historialSection.classList.remove('hidden');
+      currentPage = 1; // Resetear a la primera página al mostrar historial
+      await renderHistorial();
+    }
+
+    function showMain() {
+      historialSection.classList.add('hidden');
+      clasificatoriaSection.classList.remove('hidden');
+      detalleSection.classList.remove('hidden');
+    }
+
+    function filterMatches(matches) {
+      return matches.filter(match => {
+        // Filtro por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
+        if (filterFechaDesde.value) {
+          let matchDate;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            matchDate = match.fecha;
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+          } else {
+            return false; // Sin fecha, no incluir
+          }
+          
+          if (matchDate < filterFechaDesde.value) return false;
+        }
+        
+        if (filterFechaHasta.value) {
+          let matchDate;
+          if (match.fecha) {
+            // Si hay fecha específica, usarla directamente
+            matchDate = match.fecha;
+          } else if (match.closedAt) {
+            // Si solo hay timestamp, convertirlo a fecha local
+            matchDate = new Date(match.closedAt).toISOString().split('T')[0];
+          } else {
+            return false; // Sin fecha, no incluir
+          }
+          
+          if (matchDate > filterFechaHasta.value) return false;
+        }
+
+        // Filtro por jugador
+        if (filterJugador.value) {
+          const searchTerm = filterJugador.value.toLowerCase();
+          const allPlayers = [
+            match.teamA?.j1, match.teamA?.j2,
+            match.teamB?.j1, match.teamB?.j2
+          ].filter(p => p).map(p => p.toLowerCase());
+          if (!allPlayers.some(p => p.includes(searchTerm))) return false;
+        }
+
+        // Filtro por modalidad
+        if (filterModalidad.value && String(match.target) !== filterModalidad.value) return false;
+
+        // Filtro solo lisas
+        if (filterSoloLisas.checked && !match.lisa) return false;
+
+        return true;
+      });
+    }
+
+    function calculateStats(matches) {
+      const total = matches.length;
+      const lisas = matches.filter(m => m.lisa).length;
+      const totalPuntos = matches.reduce((sum, m) => sum + (m.totalA || 0) + (m.totalB || 0), 0);
+      const promedioPuntos = total > 0 ? Math.round(totalPuntos / (total * 2)) : 0;
+      
+      // Calcular rondas promedio (aproximado basado en puntos)
+      const promedioRondas = total > 0 ? Math.round(promedioPuntos / 15) : 0; // Estimación
+      
+      return { total, lisas, promedioPuntos, promedioRondas };
+    }
+
+    async function renderHistorial() {
+      try {
+        console.log('🔄 Rendering history...');
+        const allMatches = await loadMatches();
+        console.log('📊 All matches loaded:', allMatches);
+        
         const filteredMatches = filterMatches(allMatches);
+        console.log('🔍 Filtered matches:', filteredMatches);
         
+        // Ordenar por fecha - BUG CORREGIDO: cambiado a.closedAt por b.closedAt
         filteredMatches.sort((a, b) => {
-          // Ordenar por fecha - Manejar fechas correctamente para evitar problemas de zona horaria
-          let dateA, dateB;
-          
-          if (a.fecha) {
-            dateA = new Date(a.fecha + 'T00:00:00');
-          } else if (a.closedAt) {
-            dateA = new Date(a.closedAt);
-          } else {
-            dateA = new Date(0); // Fecha mínima si no hay fecha
-          }
-          
-          if (b.fecha) {
-            dateB = new Date(b.fecha + 'T00:00:00');
-          } else if (b.closedAt) {
-            dateB = new Date(b.closedAt);
-          } else {
-            dateB = new Date(0); // Fecha mínima si no hay fecha
-          }
-          
+          const dateA = new Date(a.fecha || a.closedAt);
+          const dateB = new Date(b.fecha || b.closedAt);
           return historialSortDesc ? dateB - dateA : dateA - dateB;
         });
 
         // Guardar partidas filtradas para paginación
         filteredMatchesForPagination = filteredMatches;
+
+        // Actualizar estadísticas (usar todas las partidas filtradas, no solo la página actual)
+        const stats = calculateStats(filteredMatches);
+        statsTotal.textContent = stats.total;
+        statsLisas.textContent = stats.lisas;
+        statsPromedio.textContent = stats.promedioPuntos;
+        statsDuracion.textContent = stats.promedioRondas;
 
         // Calcular paginación
         const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
@@ -753,18 +1015,21 @@
         const endIndex = startIndex + itemsPerPage;
         const matchesForCurrentPage = filteredMatches.slice(startIndex, endIndex);
 
-        matchesBody.innerHTML = '';
+        // Renderizar tabla
+        historialBody.innerHTML = '';
         
         if (filteredMatches.length === 0) {
           noResults.classList.remove('hidden');
           document.getElementById('pagination-controls').classList.add('hidden');
+          console.log('📭 No matches found to display');
           return;
         }
         
         noResults.classList.add('hidden');
         document.getElementById('pagination-controls').classList.remove('hidden');
+        console.log(`📋 Rendering ${matchesForCurrentPage.length} matches (page ${currentPage} of ${totalPages})`);
         
-        matchesForCurrentPage.forEach(match => {
+        matchesForCurrentPage.forEach((match, index) => {
           const row = document.createElement('tr');
           row.className = 'hover:bg-slate-50';
 
@@ -779,7 +1044,6 @@
           } else {
             fecha = 'Sin fecha';
           }
-          
           const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
           const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
           
@@ -805,485 +1069,1750 @@
             <td class="px-4 py-3">
               ${match.lisa ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Sí</span>' : '<span class="text-slate-400">No</span>'}
             </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <button onclick="editMatch('${match.id}')" class="text-blue-600 hover:text-blue-800 p-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </button>
-                <button onclick="deleteMatchConfirm('${match.id}')" class="text-red-600 hover:text-red-800 p-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-              </div>
-            </td>
           `;
           
-          matchesBody.appendChild(row);
+          // Hacer la fila clickeable
+          row.style.cursor = 'pointer';
+          row.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Row clicked, calling showMatchDetails');
+            showMatchDetails(match);
+          });
+          
+          historialBody.appendChild(row);
         });
 
         // Actualizar controles de paginación
         updatePaginationControls(filteredMatches.length, totalPages);
+        
+        console.log('✅ History rendered successfully');
+      } catch (error) {
+        console.error('❌ Error rendering history:', error);
+        historialBody.innerHTML = '<tr><td colspan="9" class="px-4 py-3 text-center text-red-600">Error al cargar el historial: ' + error.message + '</td></tr>';
+      }
+    }
+
+    async function exportToCsv() {
+      try {
+        const allMatches = await loadMatches();
+        const filteredMatches = filterMatches(allMatches);
+      
+      if (filteredMatches.length === 0) {
+        alert('No hay partidas para exportar con los filtros actuales.');
+        return;
       }
 
-      // Función para actualizar controles de paginación
-      function updatePaginationControls(totalItems, totalPages) {
-        const paginationInfo = document.getElementById('pagination-info');
-        const paginationTotal = document.getElementById('pagination-total');
-        const paginationPrev = document.getElementById('pagination-prev');
-        const paginationNext = document.getElementById('pagination-next');
-        const paginationNumbers = document.getElementById('pagination-numbers');
-
-        if (!paginationInfo || !paginationTotal || !paginationPrev || !paginationNext || !paginationNumbers) {
-          return;
-        }
-
-        // Actualizar información de paginación
-        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
-        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-        paginationInfo.textContent = `${startItem} - ${endItem}`;
-        paginationTotal.textContent = totalItems;
-
-        // Habilitar/deshabilitar botones
-        paginationPrev.disabled = currentPage === 1;
-        paginationNext.disabled = currentPage === totalPages || totalPages === 0;
-
-        // Generar números de página
-        paginationNumbers.innerHTML = '';
-        
-        if (totalPages === 0) {
-          return;
-        }
-
-        // Mostrar máximo 5 números de página alrededor de la página actual
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
-
-        // Ajustar si estamos cerca del inicio o del final
-        if (endPage - startPage < 4) {
-          if (startPage === 1) {
-            endPage = Math.min(5, totalPages);
-          } else if (endPage === totalPages) {
-            startPage = Math.max(1, totalPages - 4);
-          }
-        }
-
-        // Botón para primera página si no está visible
-        if (startPage > 1) {
-          const firstBtn = document.createElement('button');
-          firstBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
-          firstBtn.textContent = '1';
-          firstBtn.addEventListener('click', () => {
-            currentPage = 1;
-            renderMatches();
-          });
-          paginationNumbers.appendChild(firstBtn);
-          
-          if (startPage > 2) {
-            const ellipsis = document.createElement('span');
-            ellipsis.className = 'px-2 text-slate-500';
-            ellipsis.textContent = '...';
-            paginationNumbers.appendChild(ellipsis);
-          }
-        }
-
-        // Números de página
-        for (let i = startPage; i <= endPage; i++) {
-          const pageBtn = document.createElement('button');
-          pageBtn.className = `px-3 py-2 rounded-lg border text-sm font-semibold ${
-            i === currentPage
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-          }`;
-          pageBtn.textContent = i;
-          pageBtn.addEventListener('click', () => {
-            currentPage = i;
-            renderMatches();
-          });
-          paginationNumbers.appendChild(pageBtn);
-        }
-
-        // Botón para última página si no está visible
-        if (endPage < totalPages) {
-          if (endPage < totalPages - 1) {
-            const ellipsis = document.createElement('span');
-            ellipsis.className = 'px-2 text-slate-500';
-            ellipsis.textContent = '...';
-            paginationNumbers.appendChild(ellipsis);
-          }
-          
-          const lastBtn = document.createElement('button');
-          lastBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
-          lastBtn.textContent = totalPages;
-          lastBtn.addEventListener('click', () => {
-            currentPage = totalPages;
-            renderMatches();
-          });
-          paginationNumbers.appendChild(lastBtn);
-        }
-      }
-
-      // Funciones del modal
-      function showModal(title, match = null) {
-        currentEditingMatch = match;
-        modalTitle.textContent = title;
-        
-        if (match) {
-          // Editar partida existente
-          document.getElementById('modal-fecha').value = match.fecha || '';
-          document.getElementById('modal-mesa').value = match.mesa || '';
-          document.getElementById('modal-target').value = match.target || 100;
-          document.getElementById('modal-teamA-j1').value = match.teamA?.j1 || '';
-          document.getElementById('modal-teamA-j2').value = match.teamA?.j2 || '';
-          document.getElementById('modal-teamB-j1').value = match.teamB?.j1 || '';
-          document.getElementById('modal-teamB-j2').value = match.teamB?.j2 || '';
-          
-          renderModalRounds(match.rounds || []);
+      const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa'];
+      const rows = filteredMatches.map(match => {
+        // Manejar fechas correctamente para evitar problemas de zona horaria
+        let fecha;
+        if (match.fecha) {
+          // Si hay fecha específica, usarla directamente
+          fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+        } else if (match.closedAt) {
+          // Si solo hay timestamp, convertirlo a fecha local
+          fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
         } else {
-          // Nueva partida - Usar fecha local correcta
-          const today = new Date();
-          const year = today.getFullYear();
-          const month = String(today.getMonth() + 1).padStart(2, '0');
-          const day = String(today.getDate()).padStart(2, '0');
-          document.getElementById('modal-fecha').value = `${year}-${month}-${day}`;
-          document.getElementById('modal-mesa').value = '';
-          document.getElementById('modal-target').value = 100;
-          document.getElementById('modal-teamA-j1').value = '';
-          document.getElementById('modal-teamA-j2').value = '';
-          document.getElementById('modal-teamB-j1').value = '';
-          document.getElementById('modal-teamB-j2').value = '';
-          
-          renderModalRounds([]);
+          fecha = 'Sin fecha';
         }
         
-        matchModal.classList.remove('hidden');
+        const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
+        const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+        
+        let ganador = '-';
+        if (match.winner === 'A') ganador = 'Equipo A';
+        else if (match.winner === 'B') ganador = 'Equipo B';
+
+        return [
+          fecha,
+          match.mesa || '-',
+          match.target,
+          equipoA,
+          match.totalA || 0,
+          equipoB,
+          match.totalB || 0,
+          ganador,
+          match.lisa ? 'Sí' : 'No'
+        ];
+      });
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `historial_domino_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error exporting CSV:', error);
+        alert('Error al exportar CSV: ' + error.message);
       }
+    }
 
-      function hideModal() {
-        matchModal.classList.add('hidden');
-        currentEditingMatch = null;
-        matchForm.reset();
-      }
+    async function clearFilters() {
+      filterFechaDesde.value = '';
+      filterFechaHasta.value = '';
+      filterJugador.value = '';
+      filterModalidad.value = '';
+      filterSoloLisas.checked = false;
+      currentPage = 1; // Resetear a la primera página
+      await renderHistorial();
+    }
 
-      function renderModalRounds(rounds) {
-        const roundsContainer = document.getElementById('modal-rounds');
-        roundsContainer.innerHTML = '';
-        
-        rounds.forEach((round, index) => {
-          const roundDiv = document.createElement('div');
-          roundDiv.className = 'grid grid-cols-3 gap-3 items-center';
-          roundDiv.innerHTML = `
-            <div class="text-sm font-semibold text-slate-700">Ronda ${index + 1}</div>
-            <input type="number" min="0" value="${round.a || 0}" class="round-a rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos A">
-            <input type="number" min="0" value="${round.b || 0}" class="round-b rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos B">
-          `;
-          roundsContainer.appendChild(roundDiv);
-        });
-      }
-
-      function getModalRounds() {
-        const rounds = [];
-        const roundDivs = document.querySelectorAll('#modal-rounds > div');
-        
-        roundDivs.forEach(div => {
-          const a = parseInt(div.querySelector('.round-a').value) || 0;
-          const b = parseInt(div.querySelector('.round-b').value) || 0;
-          rounds.push({ a, b });
-        });
-        
-        return rounds;
-      }
-
-      function calculateMatchTotals(rounds, target) {
-        let totalA = 0, totalB = 0, winner = null;
-        
-        for (const round of rounds) {
-          totalA += round.a || 0;
-          totalB += round.b || 0;
-          
-          if (totalA >= target) {
-            winner = 'A';
-            break;
-          } else if (totalB >= target) {
-            winner = 'B';
-            break;
-          }
-        }
-        
-        const lisa = totalA === 0 || totalB === 0;
-        
-        return { totalA, totalB, winner, lisa };
-      }
-
-      // Event listeners
-      addMatchBtn.addEventListener('click', () => {
-        showModal('Nueva Partida');
-      });
-
-      closeModal.addEventListener('click', hideModal);
-      cancelBtn.addEventListener('click', hideModal);
-
-      addRoundBtn.addEventListener('click', () => {
-        const roundsContainer = document.getElementById('modal-rounds');
-        const roundCount = roundsContainer.children.length;
-        const roundDiv = document.createElement('div');
-        roundDiv.className = 'grid grid-cols-3 gap-3 items-center';
-        roundDiv.innerHTML = `
-          <div class="text-sm font-semibold text-slate-700">Ronda ${roundCount + 1}</div>
-          <input type="number" min="0" class="round-a rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos A">
-          <input type="number" min="0" class="round-b rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Puntos B">
-        `;
-        roundsContainer.appendChild(roundDiv);
-      });
-
-      matchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        try {
-          const formData = {
-            fecha: document.getElementById('modal-fecha').value,
-            mesa: document.getElementById('modal-mesa').value,
-            target: parseInt(document.getElementById('modal-target').value),
-            teamA: {
-              j1: document.getElementById('modal-teamA-j1').value,
-              j2: document.getElementById('modal-teamA-j2').value
-            },
-            teamB: {
-              j1: document.getElementById('modal-teamB-j1').value,
-              j2: document.getElementById('modal-teamB-j2').value
-            },
-            rounds: getModalRounds()
-          };
-          
-          const { totalA, totalB, winner, lisa } = calculateMatchTotals(formData.rounds, formData.target);
-          
-          const matchData = {
-            ...formData,
-            totalA,
-            totalB,
-            winner,
-            lisa,
-            closedAt: Date.now()
-          };
-          
-          if (currentEditingMatch) {
-            // Editar partida existente
-            matchData.id = currentEditingMatch.id;
-            const index = allMatches.findIndex(m => m.id === currentEditingMatch.id);
-            allMatches[index] = matchData;
-          } else {
-            // Nueva partida
-            matchData.id = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            allMatches.push(matchData);
-          }
-          
-          await saveMatches(allMatches);
-          hideModal();
-          renderMatches();
-          updateStats();
-          
-          alert(currentEditingMatch ? 'Partida actualizada correctamente' : 'Nueva partida creada correctamente');
-        } catch (error) {
-          console.error('Error saving match:', error);
-          alert('Error al guardar la partida: ' + error.message);
-        }
-      });
-
-      // Funciones globales para los botones de acción
-      window.editMatch = function(matchId) {
-        const match = allMatches.find(m => m.id === matchId);
-        if (match) {
-          showModal('Editar Partida', match);
-        }
-      };
-
-      window.deleteMatchConfirm = function(matchId) {
-        const match = allMatches.find(m => m.id === matchId);
-        if (match) {
-          document.getElementById('confirm-delete').onclick = () => deleteMatch(matchId);
-          deleteModal.classList.remove('hidden');
-        }
-      };
-
-      // Botones del modal de eliminación
-      document.getElementById('cancel-delete').addEventListener('click', () => {
-        deleteModal.classList.add('hidden');
-      });
-
-      // Filtros
-      [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
-        filter.addEventListener('input', () => {
-          currentPage = 1; // Resetear a la primera página al filtrar
-          renderMatches();
-        });
-        filter.addEventListener('change', () => {
-          currentPage = 1; // Resetear a la primera página al filtrar
-          renderMatches();
-        });
-      });
-
-      clearFiltersBtn.addEventListener('click', () => {
-        filterFechaDesde.value = '';
-        filterFechaHasta.value = '';
-        filterJugador.value = '';
-        filterModalidad.value = '';
-        filterSoloLisas.checked = false;
-        currentPage = 1; // Resetear a la primera página
-        renderMatches();
-      });
-
-      // Event listeners para paginación
+    // Función para actualizar controles de paginación
+    function updatePaginationControls(totalItems, totalPages) {
+      const paginationInfo = document.getElementById('pagination-info');
+      const paginationTotal = document.getElementById('pagination-total');
       const paginationPrev = document.getElementById('pagination-prev');
       const paginationNext = document.getElementById('pagination-next');
+      const paginationNumbers = document.getElementById('pagination-numbers');
 
-      if (paginationPrev) {
-        paginationPrev.addEventListener('click', () => {
-          if (currentPage > 1) {
-            currentPage--;
-            renderMatches();
-          }
-        });
+      if (!paginationInfo || !paginationTotal || !paginationPrev || !paginationNext || !paginationNumbers) {
+        return;
       }
 
-      if (paginationNext) {
-        paginationNext.addEventListener('click', () => {
-          const totalPages = Math.ceil(filteredMatchesForPagination.length / itemsPerPage);
-          if (currentPage < totalPages) {
-            currentPage++;
-            renderMatches();
-          }
-        });
+      // Actualizar información de paginación
+      const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+      const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+      paginationInfo.textContent = `${startItem} - ${endItem}`;
+      paginationTotal.textContent = totalItems;
+
+      // Habilitar/deshabilitar botones
+      paginationPrev.disabled = currentPage === 1;
+      paginationNext.disabled = currentPage === totalPages || totalPages === 0;
+
+      // Generar números de página
+      paginationNumbers.innerHTML = '';
+      
+      if (totalPages === 0) {
+        return;
       }
 
-      // Exportar todo
-      exportAllBtn.addEventListener('click', () => {
-        const headers = ['Fecha', 'Mesa', 'Modalidad', 'Equipo A', 'Puntos A', 'Equipo B', 'Puntos B', 'Ganador', 'Lisa', 'Rondas'];
-        const rows = allMatches.map(match => {
-          // Manejar fechas correctamente para evitar problemas de zona horaria
-          let fecha;
-          if (match.fecha) {
-            // Si hay fecha específica, usarla directamente
-            fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES');
-          } else if (match.closedAt) {
-            // Si solo hay timestamp, convertirlo a fecha local
-            fecha = new Date(match.closedAt).toLocaleDateString('es-ES');
-          } else {
-            fecha = 'Sin fecha';
-          }
+      // Mostrar máximo 5 números de página alrededor de la página actual
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      // Ajustar si estamos cerca del inicio o del final
+      if (endPage - startPage < 4) {
+        if (startPage === 1) {
+          endPage = Math.min(5, totalPages);
+        } else if (endPage === totalPages) {
+          startPage = Math.max(1, totalPages - 4);
+        }
+      }
+
+      // Botón para primera página si no está visible
+      if (startPage > 1) {
+        const firstBtn = document.createElement('button');
+        firstBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+        firstBtn.textContent = '1';
+        firstBtn.addEventListener('click', () => {
+          currentPage = 1;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(firstBtn);
+        
+        if (startPage > 2) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-2 text-slate-500';
+          ellipsis.textContent = '...';
+          paginationNumbers.appendChild(ellipsis);
+        }
+      }
+
+      // Números de página
+      for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `px-3 py-2 rounded-lg border text-sm font-semibold ${
+          i === currentPage
+            ? 'bg-primary-600 text-white border-primary-600'
+            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+        }`;
+        pageBtn.textContent = i;
+        pageBtn.addEventListener('click', () => {
+          currentPage = i;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(pageBtn);
+      }
+
+      // Botón para última página si no está visible
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          const ellipsis = document.createElement('span');
+          ellipsis.className = 'px-2 text-slate-500';
+          ellipsis.textContent = '...';
+          paginationNumbers.appendChild(ellipsis);
+        }
+        
+        const lastBtn = document.createElement('button');
+        lastBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+        lastBtn.textContent = totalPages;
+        lastBtn.addEventListener('click', () => {
+          currentPage = totalPages;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        });
+        paginationNumbers.appendChild(lastBtn);
+      }
+    }
+
+    function showMatchDetails(match) {
+      console.log('showMatchDetails called with:', match);
+      
+      // Verificar que el modal existe
+      if (!modal) {
+        console.error('Modal element not found!');
+        return;
+      }
+      
+      // Información general - Manejar fechas correctamente para evitar problemas de zona horaria
+      let fecha;
+      if (match.fecha) {
+        // Si hay fecha específica, usarla directamente
+        fecha = new Date(match.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } else if (match.closedAt) {
+        // Si solo hay timestamp, convertirlo a fecha local
+        fecha = new Date(match.closedAt).toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } else {
+        fecha = 'Sin fecha';
+      }
+      
+      const modalFecha = document.getElementById('modal-fecha');
+      const modalMesa = document.getElementById('modal-mesa');
+      const modalModalidad = document.getElementById('modal-modalidad');
+      
+      if (modalFecha) modalFecha.textContent = fecha;
+      if (modalMesa) modalMesa.textContent = match.mesa || 'No especificada';
+      if (modalModalidad) modalModalidad.textContent = `${match.target} puntos`;
+
+      // Equipos
+      const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+      const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+      
+      const modalPlayersA = document.getElementById('modal-players-a');
+      const modalPlayersB = document.getElementById('modal-players-b');
+      const modalTotalA = document.getElementById('modal-total-a');
+      const modalTotalB = document.getElementById('modal-total-b');
+      
+      if (modalPlayersA) modalPlayersA.textContent = equipoA;
+      if (modalPlayersB) modalPlayersB.textContent = equipoB;
+      if (modalTotalA) modalTotalA.textContent = match.totalA || 0;
+      if (modalTotalB) modalTotalB.textContent = match.totalB || 0;
+
+      // Resaltar equipo ganador
+      const teamAEl = document.getElementById('modal-team-a');
+      const teamBEl = document.getElementById('modal-team-b');
+      
+      if (teamAEl && teamBEl) {
+        teamAEl.classList.remove('border-green-400', 'bg-green-50');
+        teamBEl.classList.remove('border-green-400', 'bg-green-50');
+        
+        if (match.winner === 'A') {
+          teamAEl.classList.add('border-green-400', 'bg-green-50');
+        } else if (match.winner === 'B') {
+          teamBEl.classList.add('border-green-400', 'bg-green-50');
+        }
+      }
+
+      // Resultado
+      let ganador = 'Empate';
+      if (match.winner === 'A') ganador = 'Equipo A';
+      else if (match.winner === 'B') ganador = 'Equipo B';
+      
+      const modalGanador = document.getElementById('modal-ganador');
+      const modalLisa = document.getElementById('modal-lisa');
+      
+      if (modalGanador) modalGanador.textContent = ganador;
+      if (modalLisa) modalLisa.textContent = match.lisa ? 'Sí' : 'No';
+
+      // Usar las rondas reales de la partida
+      let rounds = match.rounds || [];
+      let playedRounds = rounds;
+      const modalRounds = document.getElementById('modal-rounds');
+      
+      // Si no hay rondas guardadas, mostrar mensaje
+      if (rounds.length === 0) {
+        const modalDuracionTemp = document.getElementById('modal-duracion');
+        if (modalDuracionTemp) modalDuracionTemp.textContent = 'Sin datos de rondas';
+        modalRounds.innerHTML = `
+          <div class="text-center py-4 text-slate-500">
+            <p>No hay datos detallados de rondas para esta partida.</p>
+            <p class="text-sm mt-1">Solo se muestran los totales finales.</p>
+          </div>
+        `;
+      } else {
+        // Simular el desarrollo real de la partida respetando la regla "primero en llegar"
+        modalRounds.innerHTML = '';
+        
+        let acumA = 0, acumB = 0;
+        let finalRoundIndex = rounds.length;
+        
+        // Encontrar en qué ronda se alcanzó realmente el objetivo
+        for (let i = 0; i < rounds.length; i++) {
+          const tempA = acumA + (rounds[i].a || 0);
+          const tempB = acumB + (rounds[i].b || 0);
           
-          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || '-';
-          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || '-';
+          acumA = tempA;
+          acumB = tempB;
           
-          let ganador = '-';
-          if (match.winner === 'A') ganador = 'Equipo A';
-          else if (match.winner === 'B') ganador = 'Equipo B';
-
-          const rondas = (match.rounds || []).map(r => `${r.a}-${r.b}`).join('; ');
-
-          return [
-            fecha,
-            match.mesa || '-',
-            match.target,
-            equipoA,
-            match.totalA || 0,
-            equipoB,
-            match.totalB || 0,
-            ganador,
-            match.lisa ? 'Sí' : 'No',
-            rondas
-          ];
-        });
-
-        const csvContent = [headers, ...rows]
-          .map(row => row.map(cell => `"${cell}"`).join(','))
-          .join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `admin_domino_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      });
-
-      // Refrescar
-      refreshBtn.addEventListener('click', async () => {
-        try {
-          allMatches = await loadMatches();
-          currentPage = 1; // Resetear a la primera página al refrescar
-          renderMatches();
-          updateStats();
-          alert('Datos refrescados correctamente');
-        } catch (error) {
-          console.error('Error refreshing:', error);
-          alert('Error al refrescar: ' + error.message);
-        }
-      });
-
-      // Cerrar modales con Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          if (!matchModal.classList.contains('hidden')) hideModal();
-          if (!deleteModal.classList.contains('hidden')) deleteModal.classList.add('hidden');
-          if (!occupiedTablesModal.classList.contains('hidden')) hideOccupiedTablesModal();
-        }
-      });
-
-      // Cerrar modales haciendo clic fuera
-      matchModal.addEventListener('click', (e) => {
-        if (e.target === matchModal) hideModal();
-      });
-
-      deleteModal.addEventListener('click', (e) => {
-        if (e.target === deleteModal) deleteModal.classList.add('hidden');
-      });
-
-      // Event listeners para mesas ocupadas
-      if (viewOccupiedTablesBtn) {
-        viewOccupiedTablesBtn.addEventListener('click', showOccupiedTablesModal);
-      }
-
-      if (closeOccupiedTablesModal) {
-        closeOccupiedTablesModal.addEventListener('click', hideOccupiedTablesModal);
-      }
-
-      if (occupiedTablesModal) {
-        occupiedTablesModal.addEventListener('click', (e) => {
-          if (e.target === occupiedTablesModal) {
-            hideOccupiedTablesModal();
+          // Si alguien alcanzó el objetivo, esta es la ronda final
+          if (acumA >= match.target || acumB >= match.target) {
+            finalRoundIndex = i + 1;
+            break;
           }
-        });
-      }
-
-      // Event listener para ordenamiento
-      const sortFechaBtn = document.getElementById('sort-fecha');
-      if (sortFechaBtn) {
-        sortFechaBtn.addEventListener('click', () => {
-          historialSortDesc = !historialSortDesc;
-          currentPage = 1; // Resetear a la primera página al cambiar orden
-          renderMatches();
-        });
-      }
-
-      // Inicialización
-      async function initialize() {
-        try {
-          allMatches = await loadMatches();
-          currentPage = 1; // Asegurar que empiece en la primera página
-          renderMatches();
-          updateStats();
-        } catch (error) {
-          console.error('Error initializing admin:', error);
         }
+        
+        // Mostrar solo las rondas que realmente se jugaron
+        playedRounds = rounds.slice(0, finalRoundIndex);
+        const modalDuracionTemp2 = document.getElementById('modal-duracion');
+        if (modalDuracionTemp2) modalDuracionTemp2.textContent = `${playedRounds.length} rondas`;
+        
+        // Recalcular acumulados para mostrar correctamente
+        acumA = 0;
+        acumB = 0;
+        
+        playedRounds.forEach((round, index) => {
+          acumA += round.a || 0;
+          acumB += round.b || 0;
+          
+          const roundDiv = document.createElement('div');
+          roundDiv.className = 'grid grid-cols-4 gap-4 py-2 border-b border-slate-200 last:border-b-0';
+          
+          const isWinningRound = (acumA >= match.target || acumB >= match.target) && index === playedRounds.length - 1;
+          const roundClass = isWinningRound ? 'font-bold text-green-600' : '';
+          
+          roundDiv.innerHTML = `
+            <div class="${roundClass}">Ronda ${index + 1}</div>
+            <div class="${roundClass}">${round.a || 0}</div>
+            <div class="${roundClass}">${round.b || 0}</div>
+            <div class="${roundClass}">${acumA} - ${acumB}</div>
+          `;
+          
+          modalRounds.appendChild(roundDiv);
+        });
       }
 
-      initialize();
+      // Estadísticas adicionales basadas en las rondas realmente jugadas
+      const totalRounds = playedRounds.length;
+      const totalPuntos = (match.totalA || 0) + (match.totalB || 0);
+      const promedioPorRonda = totalRounds > 0 ? Math.round(totalPuntos / totalRounds) : 0;
+      const diferencia = Math.abs((match.totalA || 0) - (match.totalB || 0));
+      
+      const modalRondasTotal = document.getElementById('modal-rondas-total');
+      const modalPromedioRonda = document.getElementById('modal-promedio-ronda');
+      const modalDiferencia = document.getElementById('modal-diferencia');
+      const modalDuracion = document.getElementById('modal-duracion');
+      
+      if (modalRondasTotal) modalRondasTotal.textContent = totalRounds;
+      if (modalPromedioRonda) modalPromedioRonda.textContent = promedioPorRonda;
+      if (modalDiferencia) modalDiferencia.textContent = diferencia;
+      if (modalDuracion && rounds.length > 0) modalDuracion.textContent = `${totalRounds} rondas`;
+
+      console.log('About to show modal...');
+      // Mostrar modal
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      console.log('Modal should be visible now');
+    }
+
+    function hideMatchDetails() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Event listeners para historial
+    showHistoryBtn.addEventListener('click', showHistorial);
+    backToMainBtn.addEventListener('click', showMain);
+    exportCsvBtn.addEventListener('click', exportToCsv);
+    clearFiltersBtn.addEventListener('click', clearFilters);
+    
+    sortFechaBtn.addEventListener('click', () => {
+      historialSortDesc = !historialSortDesc;
+      currentPage = 1; // Resetear a la primera página al cambiar orden
+      renderHistorial().catch(error => {
+        console.error('Error sorting history:', error);
+      });
     });
+
+    // Event listeners para modal
+    closeModalBtn.addEventListener('click', hideMatchDetails);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        hideMatchDetails();
+      }
+    });
+    
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        hideMatchDetails();
+      }
+    });
+
+    // Filtros en tiempo real
+    [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
+      filter.addEventListener('input', () => {
+        currentPage = 1; // Resetear a la primera página al filtrar
+        renderHistorial().catch(error => {
+          console.error('Error filtering history:', error);
+        });
+      });
+      filter.addEventListener('change', () => {
+        currentPage = 1; // Resetear a la primera página al filtrar
+        renderHistorial().catch(error => {
+          console.error('Error filtering history:', error);
+        });
+      });
+    });
+
+    // Event listeners para paginación
+    const paginationPrev = document.getElementById('pagination-prev');
+    const paginationNext = document.getElementById('pagination-next');
+
+    if (paginationPrev) {
+      paginationPrev.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        }
+      });
+    }
+
+    if (paginationNext) {
+      paginationNext.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredMatchesForPagination.length / itemsPerPage);
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderHistorial().catch(error => {
+            console.error('Error rendering history:', error);
+          });
+        }
+      });
+    }
+
+    // ======================
+    // Modal de mesas ocupadas
+    // ======================
+    const occupiedTablesModal = document.getElementById('occupied-tables-modal');
+    const closeOccupiedTablesModal = document.getElementById('close-occupied-tables-modal');
+    const viewOccupiedTablesBtn = document.getElementById('view-occupied-tables');
+    const occupiedTablesList = document.getElementById('occupied-tables-list');
+    const occupiedTablesLoading = document.getElementById('occupied-tables-loading');
+    const occupiedTablesEmpty = document.getElementById('occupied-tables-empty');
+
+    // Función para calcular totales de una partida
+    function computeMatchTotals(match) {
+      let totalA = 0;
+      let totalB = 0;
+      
+      if (match.rounds && Array.isArray(match.rounds)) {
+        for (const r of match.rounds) {
+          totalA += Number(r.a) || 0;
+          totalB += Number(r.b) || 0;
+        }
+      }
+      
+      return { totalA, totalB };
+    }
+
+    // Función para cargar y mostrar mesas ocupadas
+    async function loadAndShowOccupiedTables() {
+      try {
+        // Mostrar loading
+        occupiedTablesLoading.classList.remove('hidden');
+        occupiedTablesList.classList.add('hidden');
+        occupiedTablesEmpty.classList.add('hidden');
+
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+
+        // Ocultar loading
+        occupiedTablesLoading.classList.add('hidden');
+
+        if (!snapshot.exists()) {
+          occupiedTablesEmpty.classList.remove('hidden');
+          return;
+        }
+
+        const activeMatches = snapshot.val();
+        const matchesArray = Object.values(activeMatches || {}).filter(m => 
+          m.inProgress && 
+          m.rounds && 
+          m.rounds.length > 0 && 
+          m.mesa && 
+          m.mesa.trim() !== ''
+        );
+
+        if (matchesArray.length === 0) {
+          occupiedTablesEmpty.classList.remove('hidden');
+          return;
+        }
+
+        // Ordenar por número de mesa
+        matchesArray.sort((a, b) => {
+          const mesaA = Number(a.mesa) || 0;
+          const mesaB = Number(b.mesa) || 0;
+          return mesaA - mesaB;
+        });
+
+        // Renderizar mesas
+        occupiedTablesList.innerHTML = '';
+        occupiedTablesList.classList.remove('hidden');
+
+        matchesArray.forEach((match) => {
+          const { totalA, totalB } = computeMatchTotals(match);
+          const equipoA = [match.teamA?.j1, match.teamA?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+          const equipoB = [match.teamB?.j1, match.teamB?.j2].filter(p => p).join(' & ') || 'Sin nombres';
+          
+          const leader = Math.max(totalA, totalB);
+          const progress = match.target ? Math.min(100, (leader / match.target) * 100) : 0;
+          const isCurrentMatch = match.id === currentMatchId;
+
+          const tableCard = document.createElement('div');
+          tableCard.className = `rounded-xl border-2 p-4 ${isCurrentMatch ? 'border-primary-500 bg-primary-50' : 'border-slate-200 bg-white'}`;
+          
+          tableCard.innerHTML = `
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h4 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span>🪑</span> Mesa ${match.mesa || 'N/A'}
+                  ${isCurrentMatch ? '<span class="badge bg-primary-600 text-white text-xs">Tu partida</span>' : ''}
+                </h4>
+                <p class="text-sm text-slate-600 mt-1">Modalidad: ${match.target || 100} puntos</p>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-500">Rondas</div>
+                <div class="text-lg font-bold text-slate-700">${match.rounds?.length || 0}</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="bg-blue-50 rounded-lg p-3 ${totalA > totalB ? 'ring-2 ring-green-500' : ''}">
+                <div class="text-xs text-blue-600 font-semibold mb-1">Equipo A</div>
+                <div class="text-sm font-semibold text-slate-800 mb-2">${equipoA}</div>
+                <div class="text-2xl font-extrabold text-blue-600">${totalA}</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 ${totalB > totalA ? 'ring-2 ring-green-500' : ''}">
+                <div class="text-xs text-red-600 font-semibold mb-1">Equipo B</div>
+                <div class="text-sm font-semibold text-slate-800 mb-2">${equipoB}</div>
+                <div class="text-2xl font-extrabold text-red-600">${totalB}</div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="flex items-center justify-between text-xs text-slate-600 mb-1">
+                <span>Progreso</span>
+                <span class="font-semibold">${progress.toFixed(0)}%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-2 bg-gradient-to-r from-primary-500 to-emerald-500 transition-all" style="width:${progress}%"></div>
+              </div>
+            </div>
+          `;
+
+          occupiedTablesList.appendChild(tableCard);
+        });
+
+      } catch (error) {
+        console.error('Error loading occupied tables:', error);
+        occupiedTablesLoading.classList.add('hidden');
+        occupiedTablesList.innerHTML = `
+          <div class="text-center py-8 text-red-600">
+            <p>Error al cargar las mesas ocupadas.</p>
+            <p class="text-sm mt-1">${error.message}</p>
+          </div>
+        `;
+        occupiedTablesList.classList.remove('hidden');
+      }
+    }
+
+    // Función para mostrar el modal
+    function showOccupiedTablesModal() {
+      occupiedTablesModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      loadAndShowOccupiedTables();
+    }
+
+    // Función para ocultar el modal
+    function hideOccupiedTablesModal() {
+      occupiedTablesModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Event listeners para el modal de mesas ocupadas
+    if (viewOccupiedTablesBtn) {
+      viewOccupiedTablesBtn.addEventListener('click', showOccupiedTablesModal);
+    }
+
+    if (closeOccupiedTablesModal) {
+      closeOccupiedTablesModal.addEventListener('click', hideOccupiedTablesModal);
+    }
+
+    if (occupiedTablesModal) {
+      occupiedTablesModal.addEventListener('click', (e) => {
+        if (e.target === occupiedTablesModal) {
+          hideOccupiedTablesModal();
+        }
+      });
+    }
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !occupiedTablesModal.classList.contains('hidden')) {
+        hideOccupiedTablesModal();
+      }
+    });
+
+    // ======================
+    // Partida en curso (detalle) - Firebase
+    // ======================
+    const MATCH_KEY = 'domino_current_match_v1';
+    const matchStatus = document.getElementById('match-status');
+    const targetSelect = document.getElementById('target');
+    const targetDisplay = document.getElementById('target-display');
+    const progressBar = document.getElementById('progress-bar');
+    const progressBadge = document.getElementById('progress-badge');
+    const addRoundBtn = document.getElementById('add-round');
+    const finalizeBtn = document.getElementById('finalize-match');
+    const newMatchBtn = document.getElementById('new-match');
+    const roundsList = document.getElementById('rounds-list');
+
+    const totalAEl = document.getElementById('total-a');
+    const totalBEl = document.getElementById('total-b');
+    const winnerText = document.getElementById('winner-text');
+    const lisaText = document.getElementById('lisa-text');
+
+    const cardA = document.getElementById('cardA');
+    const cardB = document.getElementById('cardB');
+
+    const fechaInput = document.getElementById('fecha');
+    const mesaInput = document.getElementById('mesa');
+    const a1 = document.getElementById('equipoA-jugador1');
+    const a2 = document.getElementById('equipoA-jugador2');
+    const b1 = document.getElementById('equipoB-jugador1');
+    const b2 = document.getElementById('equipoB-jugador2');
+
+    let autoFinalizing = false;
+    let deviceId = null; // ID único del dispositivo
+    let currentMatchId = null; // ID de la partida actual del dispositivo
+
+    // Función para generar o obtener ID único del dispositivo
+    function getDeviceId() {
+      if (deviceId) return deviceId;
+      
+      // Intentar obtener del localStorage
+      deviceId = localStorage.getItem(DEVICE_ID_KEY);
+      
+      if (!deviceId) {
+        // Generar nuevo ID único
+        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+      }
+      
+      return deviceId;
+    }
+
+    function randId() {
+      const rand = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.floor(Math.random() * 1e9);
+      return 'm_' + rand.toString(16);
+    }
+
+    function todayYmd() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function defaultMatch() {
+      return {
+        id: randId(),
+        deviceId: getDeviceId(),
+        inProgress: true,
+        fecha: todayYmd(),
+        mesa: '',
+        target: 100,
+        teamA: { j1: '', j2: '' },
+        teamB: { j1: '', j2: '' },
+        rounds: [],
+        closedAt: null,
+        createdAt: new Date().getTime()
+      };
+    }
+
+    // Función para asegurar que match tenga la estructura correcta
+    function ensureMatchStructure(matchObj) {
+      if (!matchObj) return defaultMatch();
+      
+      const result = {
+        id: matchObj.id || randId(),
+        deviceId: matchObj.deviceId || getDeviceId(),
+        inProgress: matchObj.inProgress !== false,
+        fecha: matchObj.fecha || todayYmd(),
+        mesa: matchObj.mesa || '',
+        target: matchObj.target || 100,
+        teamA: { 
+          j1: matchObj.teamA?.j1 || '', 
+          j2: matchObj.teamA?.j2 || '' 
+        },
+        teamB: { 
+          j1: matchObj.teamB?.j1 || '', 
+          j2: matchObj.teamB?.j2 || '' 
+        },
+        rounds: Array.isArray(matchObj.rounds) ? matchObj.rounds : [],
+        closedAt: matchObj.closedAt || null,
+        createdAt: matchObj.createdAt || new Date().getTime()
+      };
+      
+      return result;
+    }
+
+    // Nueva función: verificar si una mesa está disponible
+    async function isTableAvailable(mesaNumber) {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+        
+        if (snapshot.exists()) {
+          const activeMatches = snapshot.val();
+          // Verificar si hay alguna partida activa en esa mesa
+          for (const matchId in activeMatches) {
+            const match = activeMatches[matchId];
+            if (match.mesa === mesaNumber && match.inProgress) {
+              return false; // Mesa ocupada
+            }
+          }
+        }
+        
+        return true; // Mesa disponible
+      } catch (error) {
+        console.error('Error checking table availability:', error);
+        return true; // En caso de error, asumir disponible
+      }
+    }
+
+    // Nueva función: obtener partida activa del dispositivo para una mesa específica
+    async function getActiveMatchForTable(mesaNumber) {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+        const snapshot = await get(activeMatchesRef);
+        
+        if (snapshot.exists()) {
+          const activeMatches = snapshot.val();
+          // Buscar partida activa del dispositivo en esa mesa
+          for (const matchId in activeMatches) {
+            const match = activeMatches[matchId];
+            if (match.mesa === mesaNumber && 
+                match.deviceId === getDeviceId() && 
+                match.inProgress) {
+              return match;
+            }
+          }
+        }
+        
+        return null; // No hay partida activa del dispositivo en esa mesa
+      } catch (error) {
+        console.error('Error getting active match for table:', error);
+        return null;
+      }
+    }
+
+    // Nueva función: registrar partida como activa
+    async function registerActiveMatch(match) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${match.id}`);
+        await set(activeMatchesRef, match);
+        
+        console.log('Match registered as active:', match.id);
+      } catch (error) {
+        console.error('Error registering active match:', error);
+      }
+    }
+
+    // Nueva función: desregistrar partida activa
+    async function unregisterActiveMatch(matchId) {
+      try {
+        await waitForFirebase();
+        const { ref, remove } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${matchId}`);
+        await remove(activeMatchesRef);
+        
+        console.log('Match unregistered as active:', matchId);
+      } catch (error) {
+        console.error('Error unregistering active match:', error);
+      }
+    }
+
+    async function startNewMatch(preserve = true) {
+      // Si hay una partida previa con rondas iniciadas, cerrar la mesa automáticamente
+      if (match && match.rounds && match.rounds.length > 0 && match.mesa && match.inProgress) {
+        console.log('Cerrando mesa ocupada antes de iniciar nueva partida...');
+        await unregisterActiveMatch(match.id);
+        console.log('Mesa cerrada correctamente');
+      }
+      
+      const prev = match;
+      match = defaultMatch();
+      if (preserve && prev) {
+        match.mesa = prev.mesa || '';
+        match.target = prev.target || 100;
+        match.teamA = { j1: prev.teamA?.j1 || '', j2: prev.teamA?.j2 || '' };
+        match.teamB = { j1: prev.teamB?.j1 || '', j2: prev.teamB?.j2 || '' };
+      }
+      
+      currentMatchId = match.id;
+      saveMatch(match);
+      // No registrar como activa hasta que se agregue la primera ronda
+      bindHeaderInputs();
+      recalcAndRender();
+    }
+
+    // Función para cargar partida desde Firebase
+    async function loadMatch() {
+      try {
+        await waitForFirebase();
+        const { ref, get } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Loading current match from Firebase...');
+        
+        // Primero intentar cargar desde localStorage para obtener la mesa
+        let mesaFromStorage = '';
+        try {
+          const storedMatch = localStorage.getItem(MATCH_KEY);
+          if (storedMatch) {
+            const parsed = JSON.parse(storedMatch);
+            mesaFromStorage = parsed.mesa || '';
+          }
+        } catch (e) {
+          console.log('No stored match found in localStorage');
+        }
+        
+        // Si hay mesa en localStorage, buscar partida activa del dispositivo en esa mesa
+        if (mesaFromStorage) {
+          const activeMatch = await getActiveMatchForTable(mesaFromStorage);
+          if (activeMatch) {
+            console.log('Found active match for table:', activeMatch);
+            currentMatchId = activeMatch.id;
+            return ensureMatchStructure(activeMatch);
+          }
+        }
+        
+        // Si no hay partida activa, crear una nueva
+        console.log('No active match found, creating default');
+        return defaultMatch();
+      } catch (error) {
+        console.error('Error loading match from Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        try {
+          const raw = localStorage.getItem(MATCH_KEY);
+          if (!raw) return defaultMatch();
+          const parsed = JSON.parse(raw);
+          const match = ensureMatchStructure(parsed);
+          currentMatchId = match.id;
+          return match;
+        } catch {
+          return defaultMatch();
+        }
+      }
+    }
+
+    // Función para guardar partida en Firebase
+    async function saveMatch(m) {
+      try {
+        await waitForFirebase();
+        const { ref, set } = window.firebaseRefs;
+        const { database } = window.firebase;
+        
+        console.log('Saving current match to Firebase:', m);
+        
+        // Solo guardar en active_matches si la partida tiene rondas iniciadas y está en progreso
+        // Esto evita que se registren partidas vacías como activas
+        if (m.inProgress && m.rounds && m.rounds.length > 0 && m.mesa) {
+          const activeMatchesRef = ref(database, `${ACTIVE_MATCHES_REF}/${m.id}`);
+          await set(activeMatchesRef, m);
+        }
+        
+        // También guardar en localStorage como backup
+        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+        console.log('Match saved successfully to Firebase and localStorage');
+      } catch (error) {
+        console.error('Error saving match to Firebase:', error);
+        // Fallback a localStorage si Firebase falla
+        localStorage.setItem(MATCH_KEY, JSON.stringify(m));
+        console.log('Match saved to localStorage as fallback');
+      }
+    }
+
+    let match = null;
+
+    async function initializeMatch() {
+      console.log('initializeMatch started');
+      match = await loadMatch();
+      console.log('Match loaded:', match);
+      console.log('Match inProgress:', match.inProgress);
+      
+      currentMatchId = match.id;
+      
+      // Si la partida tiene rondas iniciadas y está en progreso, registrar como activa
+      if (match.inProgress && match.rounds && match.rounds.length > 0 && match.mesa) {
+        const isAvailable = await isTableAvailable(match.mesa);
+        if (isAvailable) {
+          await registerActiveMatch(match);
+        } else {
+          console.warn(`Mesa ${match.mesa} ya está ocupada. La partida no se registrará como activa.`);
+        }
+      }
+      
+      bindHeaderInputs();
+      recalcAndRender();
+      
+      // Configurar sincronización en tiempo real
+      setupRealtimeSync();
+      console.log('initializeMatch completed');
+    }
+
+    function setupRealtimeSync() {
+      try {
+        if (window.firebase && window.firebaseRefs) {
+          const { ref, onValue } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          console.log('Setting up real-time sync...');
+          
+          // Sincronizar partida activa del dispositivo
+          if (currentMatchId) {
+            const matchRef = ref(database, `${ACTIVE_MATCHES_REF}/${currentMatchId}`);
+            onValue(matchRef, (snapshot) => {
+              if (snapshot.exists() && !autoFinalizing) {
+                const updatedMatch = snapshot.val();
+                if (updatedMatch && updatedMatch.deviceId === getDeviceId()) {
+                  console.log('Match updated from Firebase:', updatedMatch);
+                  match = ensureMatchStructure(updatedMatch);
+                  bindHeaderInputs();
+                  recalcAndRender();
+                }
+              }
+            });
+          }
+
+          // Sincronizar historial de partidas
+          const matchesRef = ref(database, MATCH_REF);
+          onValue(matchesRef, (snapshot) => {
+            if (snapshot.exists()) {
+              console.log('Matches updated from Firebase, refreshing classification');
+              renderClasificatoria().catch(error => {
+                console.error('Error refreshing classification from Firebase:', error);
+              });
+              // Actualizar lista de jugadores para autocompletado
+              refreshPlayersList().catch(error => {
+                console.error('Error refreshing players list:', error);
+              });
+            }
+          });
+
+          // Sincronizar mesas ocupadas (actualizar modal si está abierto)
+          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+          onValue(activeMatchesRef, (snapshot) => {
+            if (snapshot.exists()) {
+              // Actualizar modal de mesas ocupadas si está abierto
+              if (occupiedTablesModal && !occupiedTablesModal.classList.contains('hidden')) {
+                console.log('Active matches updated, refreshing occupied tables modal');
+                loadAndShowOccupiedTables().catch(error => {
+                  console.error('Error refreshing occupied tables:', error);
+                });
+              }
+              
+              // Verificar si la partida actual fue actualizada (por ejemplo, cambio de nombres)
+              if (currentMatchId) {
+                const activeMatches = snapshot.val();
+                if (activeMatches[currentMatchId]) {
+                  const updatedMatch = activeMatches[currentMatchId];
+                  if (updatedMatch.deviceId === getDeviceId() && !autoFinalizing) {
+                    // Verificar si los nombres de jugadores cambiaron
+                    const namesChanged = 
+                      (match.teamA?.j1 !== updatedMatch.teamA?.j1) ||
+                      (match.teamA?.j2 !== updatedMatch.teamA?.j2) ||
+                      (match.teamB?.j1 !== updatedMatch.teamB?.j1) ||
+                      (match.teamB?.j2 !== updatedMatch.teamB?.j2);
+                    
+                    if (namesChanged) {
+                      console.log('Player names updated in active match, refreshing UI');
+                      match = ensureMatchStructure(updatedMatch);
+                      bindHeaderInputs();
+                      recalcAndRender();
+                    }
+                  }
+                }
+              }
+              
+              // Actualizar lista de jugadores para autocompletado cuando cambien las partidas activas
+              // (esto captura cambios de nombres en partidas activas)
+              refreshPlayersList().catch(error => {
+                console.error('Error refreshing players list from active matches:', error);
+              });
+            }
+          });
+          
+          updateConnectionStatus(true);
+          console.log('Real-time sync enabled successfully');
+        }
+      } catch (error) {
+        console.error('Error setting up real-time sync:', error);
+        updateConnectionStatus(false);
+      }
+    }
+
+    function updateConnectionStatus(connected) {
+      const statusEl = document.getElementById('connection-status');
+      if (statusEl) {
+        if (connected) {
+          statusEl.className = 'inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Firebase Conectado';
+        } else {
+          statusEl.className = 'inline-flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full';
+          statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Firebase Desconectado';
+        }
+      }
+    }
+
+    function bindHeaderInputs() {
+      if (!match) {
+        console.error('Match is null in bindHeaderInputs');
+        return;
+      }
+      
+      fechaInput.value = match.fecha || '';
+      mesaInput.value = match.mesa || '';
+      targetSelect.value = String(match.target || 100);
+      targetDisplay.textContent = String(match.target || 100);
+
+      a1.value = match.teamA.j1 || '';
+      a2.value = match.teamA.j2 || '';
+      b1.value = match.teamB.j1 || '';
+      b2.value = match.teamB.j2 || '';
+
+      const setDisabled = !match.inProgress;
+      const hasRounds = match.rounds && match.rounds.length > 0;
+      
+      // Bloquear nombres de equipos si ya hay rondas iniciadas
+      const teamNamesLocked = hasRounds && match.inProgress;
+      
+      [fechaInput, mesaInput, targetSelect, addRoundBtn].forEach(el => { 
+        el.disabled = setDisabled; 
+        el.classList.toggle('opacity-60', setDisabled); 
+      });
+      
+      [a1, a2, b1, b2].forEach(el => { 
+        el.disabled = setDisabled || teamNamesLocked; 
+        el.classList.toggle('opacity-60', setDisabled || teamNamesLocked);
+        if (teamNamesLocked) {
+          el.classList.add('bg-gray-100', 'cursor-not-allowed');
+        } else {
+          el.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        }
+      });
+      
+      finalizeBtn.disabled = !match.inProgress;
+      newMatchBtn.disabled = false;
+
+      matchStatus.textContent = match.inProgress ? 'En curso' : 'Finalizada';
+      matchStatus.className = 'badge ' + (match.inProgress ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700');
+    }
+
+    function computeTotals() {
+      let totalA = 0;
+      let totalB = 0;
+      let winner = null;
+      
+      // Calcular totales ronda por ronda hasta que alguien llegue a la meta
+      for (const r of match.rounds) {
+        totalA += Number(r.a) || 0;
+        totalB += Number(r.b) || 0;
+        
+        // Verificar si alguien alcanzó el objetivo
+        if (totalA >= match.target) {
+          winner = 'A';
+          break;
+        } else if (totalB >= match.target) {
+          winner = 'B';
+          break;
+        }
+      }
+      
+      return { totalA, totalB, winner };
+    }
+
+    function renderRounds() {
+      roundsList.innerHTML = '';
+      match.rounds.forEach((r, idx) => {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-12 items-center py-2';
+
+        const c1 = document.createElement('div');
+        c1.className = 'col-span-2 px-4 py-3 text-base font-semibold text-slate-700';
+        c1.textContent = `${idx + 1}`;
+
+        const c2 = document.createElement('div');
+        c2.className = 'col-span-4 px-4 py-3';
+        const inA = document.createElement('input');
+        inA.type = 'number'; inA.min = '0'; inA.step = '1'; inA.inputMode = 'numeric';
+        inA.value = r.a ?? '';
+        inA.placeholder = '0';
+        
+        // Bloquear edición si ya tiene puntos confirmados
+        const hasPointsA = r.a !== undefined && r.a !== null;
+        const hasPointsB = r.b !== undefined && r.b !== null;
+        const isLocked = (hasPointsA && r.a > 0) || (hasPointsB && r.b > 0);
+        
+        inA.className = 'w-full h-12 rounded-xl border-2 px-4 py-3 text-lg font-bold text-center focus:outline-none shadow-sm ' + 
+          (isLocked ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-not-allowed' : 'border-slate-300 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500');
+        inA.disabled = !match.inProgress || isLocked;
+        if (!isLocked) {
+          inA.addEventListener('focus', () => inA.select());
+          inA.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              inA.blur();
+            }
+          });
+          inA.addEventListener('blur', () => {
+            const value = parseInt(inA.value || '0', 10);
+            if (!isNaN(value) && value >= 0) {
+              r.a = value;
+              saveMatch(match);
+              recalcAndRender();
+            } else {
+              inA.value = r.a ?? '';
+            }
+          });
+        }
+        c2.appendChild(inA);
+
+        const c3 = document.createElement('div');
+        c3.className = 'col-span-4 px-4 py-3';
+        const inB = document.createElement('input');
+        inB.type = 'number'; inB.min = '0'; inB.step = '1'; inB.inputMode = 'numeric';
+        inB.value = r.b ?? '';
+        inB.placeholder = '0';
+        inB.className = 'w-full h-12 rounded-xl border-2 px-4 py-3 text-lg font-bold text-center focus:outline-none shadow-sm ' + 
+          (isLocked ? 'border-gray-300 bg-gray-100 text-gray-600 cursor-not-allowed' : 'border-slate-300 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500');
+        inB.disabled = !match.inProgress || isLocked;
+        if (!isLocked) {
+          inB.addEventListener('focus', () => inB.select());
+          inB.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              inB.blur();
+            }
+          });
+          inB.addEventListener('blur', () => {
+            const value = parseInt(inB.value || '0', 10);
+            if (!isNaN(value) && value >= 0) {
+              r.b = value;
+              saveMatch(match);
+              recalcAndRender();
+            } else {
+              inB.value = r.b ?? '';
+            }
+          });
+        }
+        c3.appendChild(inB);
+
+        const c4 = document.createElement('div');
+        c4.className = 'col-span-2 px-4 py-3';
+        const cDel = document.createElement('button');
+        cDel.type = 'button';
+        cDel.className = 'w-full h-10 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 text-sm font-semibold border border-red-200 transition-colors';
+        cDel.textContent = '✕';
+        cDel.disabled = !match.inProgress;
+        cDel.addEventListener('click', () => {
+          match.rounds.splice(idx, 1);
+          saveMatch(match);
+          recalcAndRender();
+        });
+        c4.appendChild(cDel);
+
+        row.appendChild(c1);
+        row.appendChild(c2);
+        row.appendChild(c3);
+        row.appendChild(c4);
+        roundsList.appendChild(row);
+      });
+    }
+
+    async function recordFinalizedMatch() {
+      try {
+        const { totalA, totalB, winner } = computeTotals();
+        const lisa = totalA === 0 || totalB === 0;
+        const matches = await loadMatches();
+        matches.push({
+          id: match.id,
+          fecha: match.fecha,
+          mesa: match.mesa,
+          target: match.target,
+          teamA: { j1: match.teamA.j1, j2: match.teamA.j2 },
+          teamB: { j1: match.teamB.j1, j2: match.teamB.j2 },
+          rounds: [...match.rounds],
+          totalA,
+          totalB,
+          winner,
+          lisa,
+          closedAt: new Date().getTime()
+        });
+        await saveMatches(matches);
+        await renderClasificatoria();
+        
+        // Actualizar lista de jugadores para autocompletado
+        await refreshPlayersList();
+        
+        // Desregistrar partida activa
+        await unregisterActiveMatch(match.id);
+      } catch (error) {
+        console.error('Error recording finalized match:', error);
+      }
+    }
+
+    async function autoFinalizeAndRestart() {
+      if (autoFinalizing || !match.inProgress) return;
+      autoFinalizing = true;
+      try {
+        match.inProgress = false;
+        match.closedAt = new Date().getTime();
+        await saveMatch(match);
+        bindHeaderInputs();
+        recalcAndRender();
+        await recordFinalizedMatch();
+        setTimeout(async () => {
+          autoFinalizing = false;
+          await startNewMatch(true);
+        }, 1200);
+      } catch (error) {
+        console.error('Error in autoFinalizeAndRestart:', error);
+        autoFinalizing = false;
+      }
+    }
+
+    function recalcAndRender() {
+      const { totalA, totalB, winner } = computeTotals();
+      totalAEl.textContent = String(totalA);
+      totalBEl.textContent = String(totalB);
+
+      const leader = Math.max(totalA, totalB);
+      const pct = Math.min(100, (leader / match.target) * 100);
+      progressBar.style.width = pct.toFixed(0) + '%';
+
+      cardA.classList.toggle('winner', totalA > totalB && match.inProgress);
+      cardB.classList.toggle('winner', totalB > totalA && match.inProgress);
+
+      const reached = winner !== null;
+      progressBadge.textContent = reached ? 'Objetivo alcanzado' : 'En curso';
+      progressBadge.className = 'badge ' + (reached ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700');
+      finalizeBtn.disabled = !match.inProgress || !reached;
+
+      if (!match.inProgress) {
+        let ganador = '-';
+        if (winner === 'A') ganador = 'Equipo A';
+        else if (winner === 'B') ganador = 'Equipo B';
+        winnerText.textContent = ganador;
+        const esLisa = totalA === 0 || totalB === 0;
+        lisaText.textContent = esLisa ? 'Sí' : 'No';
+      } else {
+        winnerText.textContent = '-';
+        lisaText.textContent = '-';
+      }
+
+      renderRounds();
+
+      if (match.inProgress && reached) {
+        autoFinalizeAndRestart();
+      }
+    }
+
+    // Binders
+    targetSelect.addEventListener('change', () => { 
+      match.target = parseInt(targetSelect.value, 10); 
+      targetDisplay.textContent = targetSelect.value; 
+      saveMatch(match); 
+      recalcAndRender(); 
+    });
+    
+    fechaInput.addEventListener('change', () => { 
+      match.fecha = fechaInput.value;
+      saveMatch(match); 
+    });
+    
+    // Permitir cambiar el número de mesa sin validar ocupación (solo se valida al iniciar partida)
+    mesaInput.addEventListener('input', async () => { 
+      const newMesa = mesaInput.value;
+      
+      if (newMesa !== match.mesa) {
+        // Si ya hay rondas iniciadas, validar que la nueva mesa esté disponible
+        if (match.rounds && match.rounds.length > 0) {
+          if (newMesa && newMesa.trim() !== '') {
+            const isAvailable = await isTableAvailable(newMesa);
+            if (!isAvailable) {
+              alert(`La mesa ${newMesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
+              mesaInput.value = match.mesa;
+              return;
+            }
+          }
+          
+          // Desregistrar la mesa anterior
+          if (match.mesa) {
+            await unregisterActiveMatch(match.id);
+          }
+        }
+        
+        match.mesa = newMesa;
+        
+        // Solo registrar como activa si ya hay rondas iniciadas y la mesa es válida
+        if (match.rounds && match.rounds.length > 0 && match.mesa && match.mesa.trim() !== '') {
+          await registerActiveMatch(match);
+        }
+        
+        saveMatch(match);
+      }
+    });
+    
+    // ======================
+    // Autocompletado de jugadores
+    // ======================
+    let allPlayersList = []; // Lista de todos los jugadores únicos
+    const autocompleteIndices = {}; // Índices de sugerencias seleccionadas por campo
+
+    // Función para obtener todos los jugadores únicos de las partidas finalizadas y activas
+    async function getAllPlayers() {
+      try {
+        const playersSet = new Set();
+        
+        // Obtener jugadores de partidas finalizadas
+        const matches = await loadMatches();
+        matches.forEach(match => {
+          if (match.closedAt) { // Solo partidas finalizadas
+            [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
+              .filter(p => p && p.trim())
+              .forEach(p => playersSet.add(p.trim()));
+          }
+        });
+        
+        // También obtener jugadores de partidas activas
+        try {
+          await waitForFirebase();
+          const { ref, get } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+          const snapshot = await get(activeMatchesRef);
+          
+          if (snapshot.exists()) {
+            const activeMatches = snapshot.val();
+            Object.values(activeMatches).forEach(match => {
+              if (match && match.inProgress) {
+                [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
+                  .filter(p => p && p.trim())
+                  .forEach(p => playersSet.add(p.trim()));
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error loading active matches for players list:', error);
+        }
+        
+        allPlayersList = Array.from(playersSet).sort();
+        return allPlayersList;
+      } catch (error) {
+        console.error('Error loading players:', error);
+        return [];
+      }
+    }
+
+    // Función para filtrar jugadores según el texto ingresado
+    function filterPlayers(query) {
+      if (!query || query.trim() === '') {
+        return [];
+      }
+      const lowerQuery = query.toLowerCase();
+      return allPlayersList.filter(player => 
+        player.toLowerCase().includes(lowerQuery)
+      ).slice(0, 10); // Máximo 10 sugerencias
+    }
+
+    // Función para renderizar sugerencias en el dropdown
+    function renderSuggestions(inputId, suggestions) {
+      const dropdown = document.getElementById(`autocomplete-${inputId}`);
+      if (!dropdown) return;
+
+      if (suggestions.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      dropdown.innerHTML = '';
+      dropdown.classList.remove('hidden');
+      
+      const currentIndex = autocompleteIndices[inputId] || -1;
+
+      suggestions.forEach((player, index) => {
+        const item = document.createElement('div');
+        item.className = `px-3 py-2 cursor-pointer hover:bg-primary-50 ${index === currentIndex ? 'bg-primary-100' : ''}`;
+        item.textContent = player;
+        item.addEventListener('click', () => {
+          const input = document.getElementById(inputId);
+          if (input) {
+            input.value = player;
+            // Actualizar el match directamente
+            if (inputId === 'equipoA-jugador1') {
+              match.teamA.j1 = player;
+            } else if (inputId === 'equipoA-jugador2') {
+              match.teamA.j2 = player;
+            } else if (inputId === 'equipoB-jugador1') {
+              match.teamB.j1 = player;
+            } else if (inputId === 'equipoB-jugador2') {
+              match.teamB.j2 = player;
+            }
+            saveMatch(match);
+            dropdown.classList.add('hidden');
+            autocompleteIndices[inputId] = -1;
+          }
+        });
+        dropdown.appendChild(item);
+      });
+    }
+
+    // Función para inicializar autocompletado en un campo
+    function setupAutocomplete(inputId) {
+      const input = document.getElementById(inputId);
+      const dropdown = document.getElementById(`autocomplete-${inputId}`);
+      
+      if (!input || !dropdown) return;
+
+      let debounceTimer;
+
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const value = e.target.value;
+        
+        // Actualizar el match
+        if (inputId === 'equipoA-jugador1') {
+          match.teamA.j1 = value;
+        } else if (inputId === 'equipoA-jugador2') {
+          match.teamA.j2 = value;
+        } else if (inputId === 'equipoB-jugador1') {
+          match.teamB.j1 = value;
+        } else if (inputId === 'equipoB-jugador2') {
+          match.teamB.j2 = value;
+        }
+        saveMatch(match);
+
+        // Debounce para evitar demasiadas búsquedas
+        debounceTimer = setTimeout(() => {
+          const suggestions = filterPlayers(value);
+          autocompleteIndices[inputId] = -1;
+          renderSuggestions(inputId, suggestions);
+        }, 150);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        const dropdown = document.getElementById(`autocomplete-${inputId}`);
+        if (!dropdown || dropdown.classList.contains('hidden')) return;
+
+        const items = dropdown.querySelectorAll('div');
+        if (items.length === 0) return;
+
+        let currentIndex = autocompleteIndices[inputId] || -1;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          currentIndex = Math.min(currentIndex + 1, items.length - 1);
+          autocompleteIndices[inputId] = currentIndex;
+          items[currentIndex].scrollIntoView({ block: 'nearest' });
+          renderSuggestions(inputId, filterPlayers(input.value));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          currentIndex = Math.max(currentIndex - 1, -1);
+          autocompleteIndices[inputId] = currentIndex;
+          if (currentIndex >= 0) {
+            items[currentIndex].scrollIntoView({ block: 'nearest' });
+          }
+          renderSuggestions(inputId, filterPlayers(input.value));
+        } else if (e.key === 'Enter' && currentIndex >= 0) {
+          e.preventDefault();
+          const selectedPlayer = items[currentIndex].textContent;
+          input.value = selectedPlayer;
+          // Actualizar el match directamente
+          if (inputId === 'equipoA-jugador1') {
+            match.teamA.j1 = selectedPlayer;
+          } else if (inputId === 'equipoA-jugador2') {
+            match.teamA.j2 = selectedPlayer;
+          } else if (inputId === 'equipoB-jugador1') {
+            match.teamB.j1 = selectedPlayer;
+          } else if (inputId === 'equipoB-jugador2') {
+            match.teamB.j2 = selectedPlayer;
+          }
+          saveMatch(match);
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        } else if (e.key === 'Escape') {
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        }
+      });
+
+      // Cerrar dropdown al hacer clic fuera
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        }
+      });
+
+      // Cerrar dropdown al perder el foco
+      input.addEventListener('blur', () => {
+        // Delay para permitir que el click en el dropdown funcione
+        setTimeout(() => {
+          if (!dropdown.matches(':hover')) {
+            dropdown.classList.add('hidden');
+            autocompleteIndices[inputId] = -1;
+          }
+        }, 200);
+      });
+    }
+
+    // Inicializar autocompletado para todos los campos de jugadores
+    async function initializeAutocomplete() {
+      await getAllPlayers();
+      setupAutocomplete('equipoA-jugador1');
+      setupAutocomplete('equipoA-jugador2');
+      setupAutocomplete('equipoB-jugador1');
+      setupAutocomplete('equipoB-jugador2');
+    }
+
+    // Actualizar lista de jugadores cuando cambien las partidas
+    async function refreshPlayersList() {
+      await getAllPlayers();
+    }
+
+    // Los event listeners de los campos de jugadores ahora están manejados por setupAutocomplete
+    // para evitar duplicación y permitir el autocompletado
+
+    addRoundBtn.addEventListener('click', async () => {
+      if (!match || !match.inProgress) return;
+      
+      if (!Array.isArray(match.rounds)) {
+        match.rounds = [];
+      }
+      
+      // Si es la primera ronda, validar que la mesa esté disponible
+      if (match.rounds.length === 0) {
+        if (!match.mesa || match.mesa.trim() === '') {
+          alert('Por favor, ingresa el número de mesa antes de iniciar la partida.');
+          return;
+        }
+        
+        const isAvailable = await isTableAvailable(match.mesa);
+        if (!isAvailable) {
+          alert(`La mesa ${match.mesa} ya está ocupada por otro dispositivo. Por favor, elige otra mesa o espera a que termine la partida actual.`);
+          return;
+        }
+        
+        // Registrar la partida como activa en esta mesa
+        await registerActiveMatch(match);
+      }
+      
+      match.rounds.push({ a: 0, b: 0 });
+      saveMatch(match);
+      recalcAndRender();
+    });
+
+    finalizeBtn.addEventListener('click', () => {
+      autoFinalizeAndRestart();
+    });
+
+    newMatchBtn.addEventListener('click', async () => {
+      await startNewMatch(true);
+    });
+
+    // Funciones para filtros de clasificación
+    function updateClasificacionPeriodoInfo() {
+      const fechaDesde = document.getElementById('clasif-fecha-desde')?.value;
+      const fechaHasta = document.getElementById('clasif-fecha-hasta')?.value;
+      const periodoSelect = document.getElementById('clasif-periodo');
+      const infoDiv = document.getElementById('clasif-periodo-info');
+      
+      if (!infoDiv) return;
+      
+      let infoText = '';
+      
+      if (periodoSelect.value === '7') {
+        infoText = 'Mostrando últimos 7 días';
+      } else if (periodoSelect.value === '30') {
+        infoText = 'Mostrando últimos 30 días';
+      } else if (periodoSelect.value === '90') {
+        infoText = 'Mostrando últimos 3 meses';
+      } else if (periodoSelect.value === '365') {
+        infoText = 'Último año';
+      } else if (periodoSelect.value === 'all') {
+        infoText = 'Todas las partidas';
+      } else if (fechaDesde || fechaHasta) {
+        if (fechaDesde && fechaHasta) {
+          infoText = `Desde ${new Date(fechaDesde).toLocaleDateString('es-ES')} hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
+        } else if (fechaDesde) {
+          infoText = `Desde ${new Date(fechaDesde).toLocaleDateString('es-ES')}`;
+        } else if (fechaHasta) {
+          infoText = `Hasta ${new Date(fechaHasta).toLocaleDateString('es-ES')}`;
+        }
+      } else {
+        infoText = 'Todas las partidas';
+      }
+      
+      infoDiv.textContent = infoText;
+    }
+
+    function setClasificacionPeriodo(days) {
+      const fechaDesde = document.getElementById('clasif-fecha-desde');
+      const fechaHasta = document.getElementById('clasif-fecha-hasta');
+      
+      if (days === 'all') {
+        fechaDesde.value = '';
+        fechaHasta.value = '';
+      } else {
+        const hasta = new Date();
+        const desde = new Date();
+        desde.setDate(desde.getDate() - parseInt(days));
+        
+        fechaDesde.value = desde.toISOString().split('T')[0];
+        fechaHasta.value = hasta.toISOString().split('T')[0];
+      }
+      
+      updateClasificacionPeriodoInfo();
+      renderClasificatoria().catch(error => {
+        console.error('Error refreshing classification:', error);
+      });
+    }
+
+    function limpiarClasificacionFiltros() {
+      document.getElementById('clasif-fecha-desde').value = '';
+      document.getElementById('clasif-fecha-hasta').value = '';
+      document.getElementById('clasif-periodo').value = '';
+      document.getElementById('clasif-min-partidas').value = '';
+      updateClasificacionPeriodoInfo();
+      renderClasificatoria().catch(error => {
+        console.error('Error refreshing classification:', error);
+      });
+    }
+
+    // Event listeners para filtros de clasificación
+    const clasifFechaDesde = document.getElementById('clasif-fecha-desde');
+    const clasifFechaHasta = document.getElementById('clasif-fecha-hasta');
+    const clasifPeriodo = document.getElementById('clasif-periodo');
+    const clasifMinPartidas = document.getElementById('clasif-min-partidas');
+    const clasifLimpiarFiltros = document.getElementById('clasif-limpiar-filtros');
+
+    if (clasifFechaDesde) {
+      clasifFechaDesde.addEventListener('change', () => {
+        clasifPeriodo.value = '';
+        updateClasificacionPeriodoInfo();
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+    }
+
+    if (clasifFechaHasta) {
+      clasifFechaHasta.addEventListener('change', () => {
+        clasifPeriodo.value = '';
+        updateClasificacionPeriodoInfo();
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+    }
+
+    if (clasifPeriodo) {
+      clasifPeriodo.addEventListener('change', () => {
+        setClasificacionPeriodo(clasifPeriodo.value);
+      });
+    }
+
+    if (clasifMinPartidas) {
+      clasifMinPartidas.addEventListener('input', () => {
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+      clasifMinPartidas.addEventListener('change', () => {
+        renderClasificatoria().catch(error => {
+          console.error('Error refreshing classification:', error);
+        });
+      });
+    }
+
+    if (clasifLimpiarFiltros) {
+      clasifLimpiarFiltros.addEventListener('click', limpiarClasificacionFiltros);
+    }
+
+    // Inicialización
+    initializeMatch().then(async () => {
+      if (!match.fecha) {
+        match.fecha = todayYmd();
+      }
+      
+      updateClasificacionPeriodoInfo();
+      
+      // Inicializar autocompletado de jugadores
+      await initializeAutocomplete();
+    }).catch(error => {
+      console.error('Error initializing match:', error);
+      match = defaultMatch();
+      bindHeaderInputs();
+      recalcAndRender();
+    });
+  });
   </script>
 
 </body>
