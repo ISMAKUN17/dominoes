@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Liga Dominó y Romo V3.5</title>
+    <title>Dashboard Liga Dominó y Romo V2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
@@ -66,6 +66,13 @@
     <style>
       .winner { outline: 2px solid #16a34a; outline-offset: 4px; border-radius: 0.75rem; }
       .badge { display:inline-flex; align-items:center; gap:0.25rem; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
+      /* Estilos para autocompletado */
+      #autocomplete-equipoA-jugador1,
+      #autocomplete-equipoA-jugador2,
+      #autocomplete-equipoB-jugador1,
+      #autocomplete-equipoB-jugador2 {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 text-slate-800 font-sans">
@@ -381,18 +388,30 @@
               <fieldset>
                 <legend class="text-sm font-semibold text-slate-700">Equipo A</legend>
                 <label for="equipoA-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
-                <input id="equipoA-jugador1" name="equipoA-jugador1" type="text" placeholder="Jugador 1" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <div class="relative">
+                  <input id="equipoA-jugador1" name="equipoA-jugador1" type="text" placeholder="Jugador 1" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoA-jugador1" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
                 <label for="equipoA-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
-                <input id="equipoA-jugador2" name="equipoA-jugador2" type="text" placeholder="Jugador 2" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <div class="relative">
+                  <input id="equipoA-jugador2" name="equipoA-jugador2" type="text" placeholder="Jugador 2" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoA-jugador2" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
               </fieldset>
             </div>
             <div class="rounded-xl border border-slate-200 p-4" id="cardB">
               <fieldset>
                 <legend class="text-sm font-semibold text-slate-700">Equipo B</legend>
                 <label for="equipoB-jugador1" class="block text-sm text-slate-600 mt-3">Jugador 1</label>
-                <input id="equipoB-jugador1" name="equipoB-jugador1" type="text" placeholder="Jugador 1" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <div class="relative">
+                  <input id="equipoB-jugador1" name="equipoB-jugador1" type="text" placeholder="Jugador 1" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoB-jugador1" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
                 <label for="equipoB-jugador2" class="block text-sm text-slate-600 mt-3">Jugador 2</label>
-                <input id="equipoB-jugador2" name="equipoB-jugador2" type="text" placeholder="Jugador 2" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                <div class="relative">
+                  <input id="equipoB-jugador2" name="equipoB-jugador2" type="text" placeholder="Jugador 2" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div id="autocomplete-equipoB-jugador2" class="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
               </fieldset>
             </div>
           </div>
@@ -2029,6 +2048,10 @@
               renderClasificatoria().catch(error => {
                 console.error('Error refreshing classification from Firebase:', error);
               });
+              // Actualizar lista de jugadores para autocompletado
+              refreshPlayersList().catch(error => {
+                console.error('Error refreshing players list:', error);
+              });
             }
           });
 
@@ -2252,6 +2275,9 @@
         await saveMatches(matches);
         await renderClasificatoria();
         
+        // Actualizar lista de jugadores para autocompletado
+        await refreshPlayersList();
+        
         // Desregistrar partida activa
         await unregisterActiveMatch(match.id);
       } catch (error) {
@@ -2361,10 +2387,202 @@
       }
     });
     
-    a1.addEventListener('input', () => { match.teamA.j1 = a1.value; saveMatch(match); });
-    a2.addEventListener('input', () => { match.teamA.j2 = a2.value; saveMatch(match); });
-    b1.addEventListener('input', () => { match.teamB.j1 = b1.value; saveMatch(match); });
-    b2.addEventListener('input', () => { match.teamB.j2 = b2.value; saveMatch(match); });
+    // ======================
+    // Autocompletado de jugadores
+    // ======================
+    let allPlayersList = []; // Lista de todos los jugadores únicos
+    const autocompleteIndices = {}; // Índices de sugerencias seleccionadas por campo
+
+    // Función para obtener todos los jugadores únicos de las partidas finalizadas
+    async function getAllPlayers() {
+      try {
+        const matches = await loadMatches();
+        const playersSet = new Set();
+        
+        matches.forEach(match => {
+          if (match.closedAt) { // Solo partidas finalizadas
+            [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
+              .filter(p => p && p.trim())
+              .forEach(p => playersSet.add(p.trim()));
+          }
+        });
+        
+        allPlayersList = Array.from(playersSet).sort();
+        return allPlayersList;
+      } catch (error) {
+        console.error('Error loading players:', error);
+        return [];
+      }
+    }
+
+    // Función para filtrar jugadores según el texto ingresado
+    function filterPlayers(query) {
+      if (!query || query.trim() === '') {
+        return [];
+      }
+      const lowerQuery = query.toLowerCase();
+      return allPlayersList.filter(player => 
+        player.toLowerCase().includes(lowerQuery)
+      ).slice(0, 10); // Máximo 10 sugerencias
+    }
+
+    // Función para renderizar sugerencias en el dropdown
+    function renderSuggestions(inputId, suggestions) {
+      const dropdown = document.getElementById(`autocomplete-${inputId}`);
+      if (!dropdown) return;
+
+      if (suggestions.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      dropdown.innerHTML = '';
+      dropdown.classList.remove('hidden');
+      
+      const currentIndex = autocompleteIndices[inputId] || -1;
+
+      suggestions.forEach((player, index) => {
+        const item = document.createElement('div');
+        item.className = `px-3 py-2 cursor-pointer hover:bg-primary-50 ${index === currentIndex ? 'bg-primary-100' : ''}`;
+        item.textContent = player;
+        item.addEventListener('click', () => {
+          const input = document.getElementById(inputId);
+          if (input) {
+            input.value = player;
+            // Actualizar el match directamente
+            if (inputId === 'equipoA-jugador1') {
+              match.teamA.j1 = player;
+            } else if (inputId === 'equipoA-jugador2') {
+              match.teamA.j2 = player;
+            } else if (inputId === 'equipoB-jugador1') {
+              match.teamB.j1 = player;
+            } else if (inputId === 'equipoB-jugador2') {
+              match.teamB.j2 = player;
+            }
+            saveMatch(match);
+            dropdown.classList.add('hidden');
+            autocompleteIndices[inputId] = -1;
+          }
+        });
+        dropdown.appendChild(item);
+      });
+    }
+
+    // Función para inicializar autocompletado en un campo
+    function setupAutocomplete(inputId) {
+      const input = document.getElementById(inputId);
+      const dropdown = document.getElementById(`autocomplete-${inputId}`);
+      
+      if (!input || !dropdown) return;
+
+      let debounceTimer;
+
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const value = e.target.value;
+        
+        // Actualizar el match
+        if (inputId === 'equipoA-jugador1') {
+          match.teamA.j1 = value;
+        } else if (inputId === 'equipoA-jugador2') {
+          match.teamA.j2 = value;
+        } else if (inputId === 'equipoB-jugador1') {
+          match.teamB.j1 = value;
+        } else if (inputId === 'equipoB-jugador2') {
+          match.teamB.j2 = value;
+        }
+        saveMatch(match);
+
+        // Debounce para evitar demasiadas búsquedas
+        debounceTimer = setTimeout(() => {
+          const suggestions = filterPlayers(value);
+          autocompleteIndices[inputId] = -1;
+          renderSuggestions(inputId, suggestions);
+        }, 150);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        const dropdown = document.getElementById(`autocomplete-${inputId}`);
+        if (!dropdown || dropdown.classList.contains('hidden')) return;
+
+        const items = dropdown.querySelectorAll('div');
+        if (items.length === 0) return;
+
+        let currentIndex = autocompleteIndices[inputId] || -1;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          currentIndex = Math.min(currentIndex + 1, items.length - 1);
+          autocompleteIndices[inputId] = currentIndex;
+          items[currentIndex].scrollIntoView({ block: 'nearest' });
+          renderSuggestions(inputId, filterPlayers(input.value));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          currentIndex = Math.max(currentIndex - 1, -1);
+          autocompleteIndices[inputId] = currentIndex;
+          if (currentIndex >= 0) {
+            items[currentIndex].scrollIntoView({ block: 'nearest' });
+          }
+          renderSuggestions(inputId, filterPlayers(input.value));
+        } else if (e.key === 'Enter' && currentIndex >= 0) {
+          e.preventDefault();
+          const selectedPlayer = items[currentIndex].textContent;
+          input.value = selectedPlayer;
+          // Actualizar el match directamente
+          if (inputId === 'equipoA-jugador1') {
+            match.teamA.j1 = selectedPlayer;
+          } else if (inputId === 'equipoA-jugador2') {
+            match.teamA.j2 = selectedPlayer;
+          } else if (inputId === 'equipoB-jugador1') {
+            match.teamB.j1 = selectedPlayer;
+          } else if (inputId === 'equipoB-jugador2') {
+            match.teamB.j2 = selectedPlayer;
+          }
+          saveMatch(match);
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        } else if (e.key === 'Escape') {
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        }
+      });
+
+      // Cerrar dropdown al hacer clic fuera
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.add('hidden');
+          autocompleteIndices[inputId] = -1;
+        }
+      });
+
+      // Cerrar dropdown al perder el foco
+      input.addEventListener('blur', () => {
+        // Delay para permitir que el click en el dropdown funcione
+        setTimeout(() => {
+          if (!dropdown.matches(':hover')) {
+            dropdown.classList.add('hidden');
+            autocompleteIndices[inputId] = -1;
+          }
+        }, 200);
+      });
+    }
+
+    // Inicializar autocompletado para todos los campos de jugadores
+    async function initializeAutocomplete() {
+      await getAllPlayers();
+      setupAutocomplete('equipoA-jugador1');
+      setupAutocomplete('equipoA-jugador2');
+      setupAutocomplete('equipoB-jugador1');
+      setupAutocomplete('equipoB-jugador2');
+    }
+
+    // Actualizar lista de jugadores cuando cambien las partidas
+    async function refreshPlayersList() {
+      await getAllPlayers();
+    }
+
+    // Los event listeners de los campos de jugadores ahora están manejados por setupAutocomplete
+    // para evitar duplicación y permitir el autocompletado
 
     addRoundBtn.addEventListener('click', async () => {
       if (!match || !match.inProgress) return;
@@ -2523,12 +2741,15 @@
     }
 
     // Inicialización
-    initializeMatch().then(() => {
+    initializeMatch().then(async () => {
       if (!match.fecha) {
         match.fecha = todayYmd();
       }
       
       updateClasificacionPeriodoInfo();
+      
+      // Inicializar autocompletado de jugadores
+      await initializeAutocomplete();
     }).catch(error => {
       console.error('Error initializing match:', error);
       match = defaultMatch();
