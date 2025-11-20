@@ -174,6 +174,24 @@
       <div id="no-results" class="text-center py-8 text-slate-500 hidden">
         No se encontraron partidas con los filtros aplicados.
       </div>
+
+      <!-- Controles de paginación -->
+      <div id="pagination-controls" class="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+        <div class="text-sm text-slate-600">
+          Mostrando <span id="pagination-info" class="font-semibold">0 - 0</span> de <span id="pagination-total" class="font-semibold">0</span> partidas
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="pagination-prev" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold">
+            ← Anterior
+          </button>
+          <div id="pagination-numbers" class="flex items-center gap-1">
+            <!-- Los números de página se generarán dinámicamente -->
+          </div>
+          <button id="pagination-next" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold">
+            Siguiente →
+          </button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -357,6 +375,11 @@
       let allMatches = [];
       let currentEditingMatch = null;
       let historialSortDesc = true;
+      
+      // Variables de paginación
+      let currentPage = 1;
+      const itemsPerPage = 20; // Partidas por página
+      let filteredMatchesForPagination = []; // Partidas filtradas para paginación
 
       // Funciones de Firebase
       async function waitForFirebase() {
@@ -712,16 +735,36 @@
           return historialSortDesc ? dateB - dateA : dateA - dateB;
         });
 
+        // Guardar partidas filtradas para paginación
+        filteredMatchesForPagination = filteredMatches;
+
+        // Calcular paginación
+        const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
+        
+        // Asegurar que currentPage no exceda el total de páginas
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        } else if (currentPage < 1) {
+          currentPage = 1;
+        }
+
+        // Obtener partidas de la página actual
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const matchesForCurrentPage = filteredMatches.slice(startIndex, endIndex);
+
         matchesBody.innerHTML = '';
         
         if (filteredMatches.length === 0) {
           noResults.classList.remove('hidden');
+          document.getElementById('pagination-controls').classList.add('hidden');
           return;
         }
         
         noResults.classList.add('hidden');
+        document.getElementById('pagination-controls').classList.remove('hidden');
         
-        filteredMatches.forEach(match => {
+        matchesForCurrentPage.forEach(match => {
           const row = document.createElement('tr');
           row.className = 'hover:bg-slate-50';
 
@@ -780,6 +823,106 @@
           
           matchesBody.appendChild(row);
         });
+
+        // Actualizar controles de paginación
+        updatePaginationControls(filteredMatches.length, totalPages);
+      }
+
+      // Función para actualizar controles de paginación
+      function updatePaginationControls(totalItems, totalPages) {
+        const paginationInfo = document.getElementById('pagination-info');
+        const paginationTotal = document.getElementById('pagination-total');
+        const paginationPrev = document.getElementById('pagination-prev');
+        const paginationNext = document.getElementById('pagination-next');
+        const paginationNumbers = document.getElementById('pagination-numbers');
+
+        if (!paginationInfo || !paginationTotal || !paginationPrev || !paginationNext || !paginationNumbers) {
+          return;
+        }
+
+        // Actualizar información de paginación
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+        paginationInfo.textContent = `${startItem} - ${endItem}`;
+        paginationTotal.textContent = totalItems;
+
+        // Habilitar/deshabilitar botones
+        paginationPrev.disabled = currentPage === 1;
+        paginationNext.disabled = currentPage === totalPages || totalPages === 0;
+
+        // Generar números de página
+        paginationNumbers.innerHTML = '';
+        
+        if (totalPages === 0) {
+          return;
+        }
+
+        // Mostrar máximo 5 números de página alrededor de la página actual
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        // Ajustar si estamos cerca del inicio o del final
+        if (endPage - startPage < 4) {
+          if (startPage === 1) {
+            endPage = Math.min(5, totalPages);
+          } else if (endPage === totalPages) {
+            startPage = Math.max(1, totalPages - 4);
+          }
+        }
+
+        // Botón para primera página si no está visible
+        if (startPage > 1) {
+          const firstBtn = document.createElement('button');
+          firstBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+          firstBtn.textContent = '1';
+          firstBtn.addEventListener('click', () => {
+            currentPage = 1;
+            renderMatches();
+          });
+          paginationNumbers.appendChild(firstBtn);
+          
+          if (startPage > 2) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'px-2 text-slate-500';
+            ellipsis.textContent = '...';
+            paginationNumbers.appendChild(ellipsis);
+          }
+        }
+
+        // Números de página
+        for (let i = startPage; i <= endPage; i++) {
+          const pageBtn = document.createElement('button');
+          pageBtn.className = `px-3 py-2 rounded-lg border text-sm font-semibold ${
+            i === currentPage
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+          }`;
+          pageBtn.textContent = i;
+          pageBtn.addEventListener('click', () => {
+            currentPage = i;
+            renderMatches();
+          });
+          paginationNumbers.appendChild(pageBtn);
+        }
+
+        // Botón para última página si no está visible
+        if (endPage < totalPages) {
+          if (endPage < totalPages - 1) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'px-2 text-slate-500';
+            ellipsis.textContent = '...';
+            paginationNumbers.appendChild(ellipsis);
+          }
+          
+          const lastBtn = document.createElement('button');
+          lastBtn.className = 'px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold';
+          lastBtn.textContent = totalPages;
+          lastBtn.addEventListener('click', () => {
+            currentPage = totalPages;
+            renderMatches();
+          });
+          paginationNumbers.appendChild(lastBtn);
+        }
       }
 
       // Funciones del modal
@@ -971,8 +1114,14 @@
 
       // Filtros
       [filterFechaDesde, filterFechaHasta, filterJugador, filterModalidad, filterSoloLisas].forEach(filter => {
-        filter.addEventListener('input', renderMatches);
-        filter.addEventListener('change', renderMatches);
+        filter.addEventListener('input', () => {
+          currentPage = 1; // Resetear a la primera página al filtrar
+          renderMatches();
+        });
+        filter.addEventListener('change', () => {
+          currentPage = 1; // Resetear a la primera página al filtrar
+          renderMatches();
+        });
       });
 
       clearFiltersBtn.addEventListener('click', () => {
@@ -981,8 +1130,32 @@
         filterJugador.value = '';
         filterModalidad.value = '';
         filterSoloLisas.checked = false;
+        currentPage = 1; // Resetear a la primera página
         renderMatches();
       });
+
+      // Event listeners para paginación
+      const paginationPrev = document.getElementById('pagination-prev');
+      const paginationNext = document.getElementById('pagination-next');
+
+      if (paginationPrev) {
+        paginationPrev.addEventListener('click', () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderMatches();
+          }
+        });
+      }
+
+      if (paginationNext) {
+        paginationNext.addEventListener('click', () => {
+          const totalPages = Math.ceil(filteredMatchesForPagination.length / itemsPerPage);
+          if (currentPage < totalPages) {
+            currentPage++;
+            renderMatches();
+          }
+        });
+      }
 
       // Exportar todo
       exportAllBtn.addEventListener('click', () => {
@@ -1042,6 +1215,7 @@
       refreshBtn.addEventListener('click', async () => {
         try {
           allMatches = await loadMatches();
+          currentPage = 1; // Resetear a la primera página al refrescar
           renderMatches();
           updateStats();
           alert('Datos refrescados correctamente');
@@ -1086,10 +1260,21 @@
         });
       }
 
+      // Event listener para ordenamiento
+      const sortFechaBtn = document.getElementById('sort-fecha');
+      if (sortFechaBtn) {
+        sortFechaBtn.addEventListener('click', () => {
+          historialSortDesc = !historialSortDesc;
+          currentPage = 1; // Resetear a la primera página al cambiar orden
+          renderMatches();
+        });
+      }
+
       // Inicialización
       async function initialize() {
         try {
           allMatches = await loadMatches();
+          currentPage = 1; // Asegurar que empiece en la primera página
           renderMatches();
           updateStats();
         } catch (error) {
