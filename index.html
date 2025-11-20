@@ -2058,10 +2058,42 @@
           // Sincronizar mesas ocupadas (actualizar modal si está abierto)
           const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
           onValue(activeMatchesRef, (snapshot) => {
-            if (snapshot.exists() && occupiedTablesModal && !occupiedTablesModal.classList.contains('hidden')) {
-              console.log('Active matches updated, refreshing occupied tables modal');
-              loadAndShowOccupiedTables().catch(error => {
-                console.error('Error refreshing occupied tables:', error);
+            if (snapshot.exists()) {
+              // Actualizar modal de mesas ocupadas si está abierto
+              if (occupiedTablesModal && !occupiedTablesModal.classList.contains('hidden')) {
+                console.log('Active matches updated, refreshing occupied tables modal');
+                loadAndShowOccupiedTables().catch(error => {
+                  console.error('Error refreshing occupied tables:', error);
+                });
+              }
+              
+              // Verificar si la partida actual fue actualizada (por ejemplo, cambio de nombres)
+              if (currentMatchId) {
+                const activeMatches = snapshot.val();
+                if (activeMatches[currentMatchId]) {
+                  const updatedMatch = activeMatches[currentMatchId];
+                  if (updatedMatch.deviceId === getDeviceId() && !autoFinalizing) {
+                    // Verificar si los nombres de jugadores cambiaron
+                    const namesChanged = 
+                      (match.teamA?.j1 !== updatedMatch.teamA?.j1) ||
+                      (match.teamA?.j2 !== updatedMatch.teamA?.j2) ||
+                      (match.teamB?.j1 !== updatedMatch.teamB?.j1) ||
+                      (match.teamB?.j2 !== updatedMatch.teamB?.j2);
+                    
+                    if (namesChanged) {
+                      console.log('Player names updated in active match, refreshing UI');
+                      match = ensureMatchStructure(updatedMatch);
+                      bindHeaderInputs();
+                      recalcAndRender();
+                    }
+                  }
+                }
+              }
+              
+              // Actualizar lista de jugadores para autocompletado cuando cambien las partidas activas
+              // (esto captura cambios de nombres en partidas activas)
+              refreshPlayersList().catch(error => {
+                console.error('Error refreshing players list from active matches:', error);
               });
             }
           });
@@ -2393,12 +2425,13 @@
     let allPlayersList = []; // Lista de todos los jugadores únicos
     const autocompleteIndices = {}; // Índices de sugerencias seleccionadas por campo
 
-    // Función para obtener todos los jugadores únicos de las partidas finalizadas
+    // Función para obtener todos los jugadores únicos de las partidas finalizadas y activas
     async function getAllPlayers() {
       try {
-        const matches = await loadMatches();
         const playersSet = new Set();
         
+        // Obtener jugadores de partidas finalizadas
+        const matches = await loadMatches();
         matches.forEach(match => {
           if (match.closedAt) { // Solo partidas finalizadas
             [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
@@ -2406,6 +2439,29 @@
               .forEach(p => playersSet.add(p.trim()));
           }
         });
+        
+        // También obtener jugadores de partidas activas
+        try {
+          await waitForFirebase();
+          const { ref, get } = window.firebaseRefs;
+          const { database } = window.firebase;
+          
+          const activeMatchesRef = ref(database, ACTIVE_MATCHES_REF);
+          const snapshot = await get(activeMatchesRef);
+          
+          if (snapshot.exists()) {
+            const activeMatches = snapshot.val();
+            Object.values(activeMatches).forEach(match => {
+              if (match && match.inProgress) {
+                [match.teamA?.j1, match.teamA?.j2, match.teamB?.j1, match.teamB?.j2]
+                  .filter(p => p && p.trim())
+                  .forEach(p => playersSet.add(p.trim()));
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error loading active matches for players list:', error);
+        }
         
         allPlayersList = Array.from(playersSet).sort();
         return allPlayersList;
